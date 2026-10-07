@@ -1,0 +1,577 @@
+/* ==========================================================================
+   CYBER ESCAPE - CORE DESIGN SYSTEM & STYLESHEET
+   Presented by CESA - Department of Computer Engineering
+   ========================================================================== */
+
+@font-face {
+  font-family: 'CyberFont';
+  src: url('/assets/Timetravel-lgKje.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Color Palette */
+  --bg-primary: #060913;
+  --bg-secondary: #0a1122;
+  --bg-card: rgba(13, 22, 44, 0.72);
+  --bg-card-hover: rgba(18, 30, 60, 0.85);
+  --bg-card-solid: #0d162c;
+  --bg-input: rgba(7, 12, 26, 0.85);
+  
+  --neon-cyan: #00f3ff;
+  --neon-cyan-glow: rgba(0, 243, 255, 0.35);
+  --neon-cyan-subtle: rgba(0, 243, 255, 0.12);
+  
+  --neon-green: #00ff88;
+  --neon-green-glow: rgba(0, 255, 136, 0.35);
+  --neon-green-subtle: rgba(0, 255, 136, 0.12);
+  
+  --neon-amber: #ffb700;
+  --neon-amber-glow: rgba(255, 183, 0, 0.35);
+  
+  --neon-red: #ff2a5f;
+  --neon-red-glow: rgba(255, 42, 95, 0.35);
+  --neon-red-subtle: rgba(255, 42, 95, 0.12);
+
+  --neon-purple: #9d4edd;
+  --neon-purple-glow: rgba(157, 78, 221, 0.35);
+
+  --border-subtle: rgba(0, 243, 255, 0.18);
+  --border-active: rgba(0, 243, 255, 0.55);
+  --border-success: rgba(0, 255, 136, 0.5);
+  --border-error: rgba(255, 42, 95, 0.5);
+
+  --text-main: #f0f6fc;
+  --text-muted: #8b9bb4;
+  --text-dim: #51627d;
+  
+  /* Typography */
+  --font-display: 'CyberFont', 'Orbitron', -apple-system, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Fira Code', monospace;
+
+  /* Shadows & Effects */
+  --shadow-card: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+  --shadow-neon-cyan: 0 0 15px var(--neon-cyan-glow);
+  --shadow-neon-green: 0 0 15px var(--neon-green-glow);
+  --shadow-neon-red: 0 0 15px var(--neon-red-glow);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+}
+
+/* Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Cyber Matrix Background */
+.cyber-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: 
+    linear-gradient(to right, rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.cyber-bg-radial {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(circle at 50% 20%, rgba(0, 243, 255, 0.07) 0%, transparent 70%),
+              radial-gradient(circle at 80% 80%, rgba(157, 78, 221, 0.05) 0%, transparent 60%);
+}
+
+/* Top App Layout */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* Typography Utility Classes */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 2px;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+/* Cyber Headings */
+h1, h2, h3, .cyber-title {
+  font-family: var(--font-display);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.glow-cyan {
+  text-shadow: 0 0 12px var(--neon-cyan-glow);
+  color: var(--neon-cyan);
+}
+
+.glow-green {
+  text-shadow: 0 0 12px var(--neon-green-glow);
+  color: var(--neon-green);
+}
+
+.glow-amber {
+  text-shadow: 0 0 12px var(--neon-amber-glow);
+  color: var(--neon-amber);
+}
+
+.glow-red {
+  text-shadow: 0 0 12px var(--neon-red-glow);
+  color: var(--neon-red);
+}
+
+/* Glassmorphism Cyber Card */
+.cyber-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  box-shadow: var(--shadow-card);
+  position: relative;
+  overflow: hidden;
+  transition: border-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.cyber-card:hover {
+  border-color: rgba(0, 243, 255, 0.35);
+}
+
+/* Corner Accents on Cards */
+.cyber-card::before,
+.cyber-card::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+}
+
+.cyber-card::before {
+  top: 0;
+  left: 0;
+  border-top: 2px solid var(--neon-cyan);
+  border-left: 2px solid var(--neon-cyan);
+}
+
+.cyber-card::after {
+  bottom: 0;
+  right: 0;
+  border-bottom: 2px solid var(--neon-cyan);
+  border-right: 2px solid var(--neon-cyan);
+}
+
+/* Clean Header Navbar */
+.cyber-header {
+  height: 68px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: rgba(6, 9, 19, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.cyber-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  text-decoration: none;
+}
+
+.cyber-header-logo-icon {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--neon-cyan);
+  border-radius: 6px;
+  background: rgba(0, 243, 255, 0.08);
+  box-shadow: 0 0 10px var(--neon-cyan-glow);
+}
+
+.cyber-header-title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  color: var(--neon-cyan);
+  letter-spacing: 2.5px;
+}
+
+.cyber-header-sub {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Buttons */
+.cyber-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 0.65rem 1.4rem;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-main);
+  background: rgba(0, 243, 255, 0.08);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+}
+
+.cyber-btn:hover:not(:disabled) {
+  background: rgba(0, 243, 255, 0.2);
+  border-color: var(--neon-cyan);
+  box-shadow: var(--shadow-neon-cyan);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.cyber-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.cyber-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
+.cyber-btn-primary {
+  background: var(--neon-cyan);
+  color: #060913;
+  border-color: var(--neon-cyan);
+  font-weight: 700;
+}
+
+.cyber-btn-primary:hover:not(:disabled) {
+  background: #33f6ff;
+  color: #000;
+  box-shadow: 0 0 20px var(--neon-cyan);
+}
+
+.cyber-btn-success {
+  background: rgba(0, 255, 136, 0.12);
+  border-color: var(--border-success);
+  color: var(--neon-green);
+}
+
+.cyber-btn-success:hover:not(:disabled) {
+  background: var(--neon-green);
+  color: #000;
+  box-shadow: var(--shadow-neon-green);
+}
+
+.cyber-btn-danger {
+  background: rgba(255, 42, 95, 0.12);
+  border-color: var(--border-error);
+  color: var(--neon-red);
+}
+
+.cyber-btn-danger:hover:not(:disabled) {
+  background: var(--neon-red);
+  color: #fff;
+  box-shadow: var(--shadow-neon-red);
+}
+
+/* Inputs */
+.cyber-input {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-main);
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  outline: none;
+  transition: all var(--transition-fast);
+}
+
+.cyber-input:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 10px var(--neon-cyan-glow);
+}
+
+.cyber-input::placeholder {
+  color: var(--text-dim);
+}
+
+/* Badges & Status */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-pill-active {
+  background: rgba(0, 255, 136, 0.12);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: var(--neon-green);
+}
+
+.status-pill-waiting {
+  background: rgba(255, 183, 0, 0.12);
+  border: 1px solid rgba(255, 183, 0, 0.3);
+  color: var(--neon-amber);
+}
+
+.status-pill-eliminated {
+  background: rgba(255, 42, 95, 0.12);
+  border: 1px solid rgba(255, 42, 95, 0.3);
+  color: var(--neon-red);
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+  animation: pulse-anim 1.8s infinite;
+}
+
+@keyframes pulse-anim {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0.9); opacity: 0.7; }
+}
+
+/* Timers */
+.cyber-timer-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(10, 17, 34, 0.85);
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  padding: 0.4rem 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--neon-cyan);
+}
+
+.cyber-timer-warning {
+  border-color: var(--neon-amber);
+  color: var(--neon-amber);
+  animation: timer-pulse 1s infinite alternate;
+}
+
+.cyber-timer-danger {
+  border-color: var(--neon-red);
+  color: var(--neon-red);
+  animation: timer-pulse 0.5s infinite alternate;
+}
+
+@keyframes timer-pulse {
+  from { opacity: 0.8; }
+  to { opacity: 1; filter: drop-shadow(0 0 6px currentColor); }
+}
+
+/* Modals */
+.cyber-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(4, 7, 15, 0.85);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.cyber-modal-content {
+  background: var(--bg-card-solid);
+  border: 1px solid var(--border-active);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), var(--shadow-neon-cyan);
+  border-radius: 8px;
+  width: 100%;
+  max-width: 540px;
+  padding: 2rem;
+  position: relative;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Table styling for Admin & Leaderboard */
+.cyber-table-container {
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-card);
+}
+
+.cyber-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.cyber-table th {
+  background: rgba(10, 17, 34, 0.95);
+  padding: 0.9rem 1.1rem;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--neon-cyan);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cyber-table td {
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid rgba(0, 243, 255, 0.07);
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.cyber-table tr:hover td {
+  background: rgba(0, 243, 255, 0.03);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 243, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 243, 255, 0.4);
+}
+
+/* ==========================================================================
+   ADMIN DASHBOARD - CLEAN, SIMPLE, PROPER TYPOGRAPHY & CYBER ESCAPE THEME
+   ========================================================================== */
+
+.admin-dashboard-container {
+  font-family: var(--font-body);
+  color: #f1f5f9;
+  letter-spacing: -0.01em;
+}
+
+.admin-dashboard-container h1,
+.admin-dashboard-container h2,
+.admin-dashboard-container h3,
+.admin-dashboard-container h4,
+.admin-dashboard-container h5,
+.admin-dashboard-container button,
+.admin-dashboard-container select,
+.admin-dashboard-container input,
+.admin-dashboard-container label,
+.admin-dashboard-container th,
+.admin-dashboard-container td {
+  font-family: var(--font-body) !important;
+  letter-spacing: 0.01em;
+}
+
+.admin-mono-text {
+  font-family: var(--font-mono) !important;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Clean Admin Table Styling */
+.admin-dashboard-container .cyber-table th {
+  font-family: var(--font-body) !important;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--neon-cyan);
+  padding: 0.85rem 0.9rem;
+  background: rgba(8, 14, 30, 0.96);
+  border-bottom: 2px solid rgba(0, 243, 255, 0.22);
+}
+
+.admin-dashboard-container .cyber-table td {
+  font-family: var(--font-body) !important;
+  font-size: 0.86rem;
+  padding: 0.8rem 0.9rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.admin-dashboard-container .cyber-table tr:hover td {
+  background: rgba(0, 243, 255, 0.04);
+}
+
+/* Clean Admin Card Styling */
+.admin-card {
+  background: rgba(10, 17, 34, 0.88);
+  border: 1px solid rgba(0, 243, 255, 0.24);
+  border-radius: 8px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.admin-card:hover {
+  border-color: rgba(0, 243, 255, 0.4);
+}
+
