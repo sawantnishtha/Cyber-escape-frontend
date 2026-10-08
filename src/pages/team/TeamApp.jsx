@@ -19,6 +19,8 @@ export function TeamApp({ team, gameSession, onTeamStateChange }) {
   const [currentTeam, setCurrentTeam] = useState(team);
   const [winnersData, setWinnersData] = useState(null);
   const [completedRoundWaiting, setCompletedRoundWaiting] = useState(null);
+  const [hasEnteredFinalRiddle, setHasEnteredFinalRiddle] = useState(false);
+  const [hasSubmittedFinalRiddle, setHasSubmittedFinalRiddle] = useState(false);
 
   const currentState = gameSession?.current_state || GAME_STATES.LANDING;
   const currentRound = gameSession?.current_round || 1;
@@ -110,28 +112,34 @@ export function TeamApp({ team, gameSession, onTeamStateChange }) {
   const isPostRound1 = [
     GAME_STATES.R2_WAITING, GAME_STATES.R2_ACTIVE, GAME_STATES.R2_RESULT,
     GAME_STATES.R3_WAITING, GAME_STATES.R3_ACTIVE, GAME_STATES.R3_RESULT,
-    GAME_STATES.R4_WAITING, GAME_STATES.R4_ACTIVE, GAME_STATES.R4_RESULT,
-    GAME_STATES.FINAL_RIDDLE, GAME_STATES.FINAL_WAITING
+    GAME_STATES.R4_WAITING, GAME_STATES.R4_ACTIVE, GAME_STATES.R4_RESULT
   ].includes(currentState);
 
   const renderActiveScreen = () => {
-    if (isPostRound1 && currentTeam?.status === 'eliminated') {
-      return <ResultWaitingRoom team={currentTeam} roundNumber={currentTeam?.current_round || 1} gameSession={gameSession} />;
-    }
-
-    // If team has submitted final riddle, show Final Waiting Room
-    if (currentState === GAME_STATES.FINAL_WAITING) {
+    // If team has submitted final riddle or admin is in FINAL_WAITING, show Final Waiting Room
+    if (currentState === GAME_STATES.FINAL_WAITING || hasSubmittedFinalRiddle) {
       return <FinalWaitingRoom team={currentTeam} gameSession={gameSession} />;
     }
 
-    // Final Riddle
-    if (currentState === GAME_STATES.FINAL_RIDDLE) {
+    // Direct Final Riddle view (when state is FINAL_RIDDLE or team clicked to proceed)
+    if (currentState === GAME_STATES.FINAL_RIDDLE || hasEnteredFinalRiddle) {
       return (
         <FinalRiddlePage
           team={currentTeam}
           onFinalAnswerAccepted={() => {
-            // Handled via realtime state change
+            setHasSubmittedFinalRiddle(true);
           }}
+        />
+      );
+    }
+
+    if (isPostRound1 && currentTeam?.status === 'eliminated') {
+      return (
+        <ResultWaitingRoom
+          team={currentTeam}
+          roundNumber={currentTeam?.current_round || 1}
+          gameSession={gameSession}
+          onEnterFinalRiddle={() => setHasEnteredFinalRiddle(true)}
         />
       );
     }
@@ -189,7 +197,14 @@ export function TeamApp({ team, gameSession, onTeamStateChange }) {
       return <Round4Page team={currentTeam} onRoundComplete={() => setCompletedRoundWaiting(4)} />;
     }
     if (currentState === GAME_STATES.R4_RESULT) {
-      return <ResultWaitingRoom team={currentTeam} roundNumber={4} gameSession={gameSession} />;
+      return (
+        <ResultWaitingRoom
+          team={currentTeam}
+          roundNumber={4}
+          gameSession={gameSession}
+          onEnterFinalRiddle={() => setHasEnteredFinalRiddle(true)}
+        />
+      );
     }
 
     // Default fallback to Waiting Room 1

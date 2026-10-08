@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, HelpCircle, Key, ArrowRight, Check, X, ShieldAlert, Move, Unlock, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { HelpCircle, Sparkles, Send, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { soundEffects } from '../../utils/soundEffects';
-import { teamService } from '../../services/teamService';
 import { codeService } from '../../services/codeService';
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { getTeamRiddleIndex } from '../../utils/shuffleUtils';
 
 export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
+  // Determine assigned riddle for this squad (Internet or A Map)
   const riddleIndex = getTeamRiddleIndex(team?.team_key_hash || team?.id || '');
   const assignedRiddle =
     (GAME_CONFIG.FINAL_CHALLENGE.RIDDLES && GAME_CONFIG.FINAL_CHALLENGE.RIDDLES[riddleIndex]) ||
@@ -23,134 +23,22 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
     assignedRiddle?.answers ||
     [assignedRiddle?.answer, 'INTERNET', 'A MAP'].filter(Boolean);
 
-  const [collectedWords, setCollectedWords] = useState(['THINK', 'BEFORE', 'YOU', 'ESCAPE']);
-  const [arrangedWords, setArrangedWords] = useState(['ESCAPE', 'YOU', 'BEFORE', 'THINK']); // Initially scrambled
-  const [draggedIndex, setDraggedIndex] = useState(null);
-  const [typedPhrase, setTypedPhrase] = useState('');
-  const [phraseError, setPhraseError] = useState('');
-  const [isSentenceUnlocked, setIsSentenceUnlocked] = useState(false);
   const [finalAnswer, setFinalAnswer] = useState('');
   const [attemptsRemaining, setAttemptsRemaining] = useState(GAME_CONFIG.FINAL_CHALLENGE.MAX_ATTEMPTS || 2);
-  const [feedback, setFeedback] = useState(null);
+  const [feedback, setFeedback] = useState(null); // 'correct' | 'wrong' | null
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadWords() {
-      if (!team?.id) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const wordsData = await teamService.getTeamWords(team.id);
-        if (wordsData && wordsData.length > 0) {
-          const list = wordsData.map((w) => w.word.toUpperCase());
-          const complete = ['THINK', 'BEFORE', 'YOU', 'ESCAPE'];
-          list.forEach((w) => {
-            if (!complete.includes(w)) complete.push(w);
-          });
-          setCollectedWords(complete);
-        }
-      } catch (err) {
-        console.error('Error loading team words:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadWords();
-  }, [team?.id]);
-
-  // Check if current arrangement matches target sentence
-  useEffect(() => {
-    const target = GAME_CONFIG.FINAL_CHALLENGE.TARGET_SENTENCE || ['THINK', 'BEFORE', 'YOU', 'ESCAPE'];
-    const isMatch = arrangedWords.length === target.length && arrangedWords.every((w, i) => w === target[i]);
-    if (isMatch && !isSentenceUnlocked) {
-      soundEffects.playAccessGranted();
-      setIsSentenceUnlocked(true);
-      setTypedPhrase('THINK BEFORE YOU ESCAPE');
-      setPhraseError('');
-    }
-  }, [arrangedWords, isSentenceUnlocked]);
-
-  // Handle typing or direct entry of passphrase
-  const handleVerifyTypedPhrase = (e) => {
-    if (e) e.preventDefault();
-    const cleanTyped = typedPhrase.trim().toUpperCase().replace(/\s+/g, ' ');
-    if (cleanTyped === 'THINK BEFORE YOU ESCAPE') {
-      soundEffects.playAccessGranted();
-      setIsSentenceUnlocked(true);
-      setArrangedWords(['THINK', 'BEFORE', 'YOU', 'ESCAPE']);
-      setPhraseError('');
-    } else {
-      soundEffects.playAccessDenied();
-      setPhraseError('Incorrect phrase. Enter the 4 secret words: "THINK BEFORE YOU ESCAPE"');
-    }
-  };
-
-  const handlePhraseInputChange = (e) => {
-    const val = e.target.value;
-    setTypedPhrase(val);
-    const cleanTyped = val.trim().toUpperCase().replace(/\s+/g, ' ');
-    if (cleanTyped === 'THINK BEFORE YOU ESCAPE' && !isSentenceUnlocked) {
-      soundEffects.playAccessGranted();
-      setIsSentenceUnlocked(true);
-      setArrangedWords(['THINK', 'BEFORE', 'YOU', 'ESCAPE']);
-      setPhraseError('');
-    }
-  };
-
-  // Drag and drop handlers
-  const handleDragStart = (index) => {
-    setDraggedIndex(index);
-    soundEffects.playClick();
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (dropIndex) => {
-    if (draggedIndex === null || draggedIndex === dropIndex) return;
-    const newArranged = [...arrangedWords];
-    const [movedItem] = newArranged.splice(draggedIndex, 1);
-    newArranged.splice(dropIndex, 0, movedItem);
-    setArrangedWords(newArranged);
-    setDraggedIndex(null);
-    soundEffects.playClick();
-  };
-
-  // Swap helper for mobile or non-drag users
-  const handleMoveLeft = (index) => {
-    if (index === 0) return;
-    const next = [...arrangedWords];
-    const temp = next[index - 1];
-    next[index - 1] = next[index];
-    next[index] = temp;
-    setArrangedWords(next);
-    soundEffects.playClick();
-  };
-
-  const handleMoveRight = (index) => {
-    if (index === arrangedWords.length - 1) return;
-    const next = [...arrangedWords];
-    const temp = next[index + 1];
-    next[index + 1] = next[index];
-    next[index] = temp;
-    setArrangedWords(next);
-    soundEffects.playClick();
-  };
 
   const handleSubmitFinal = async (e) => {
-    e.preventDefault();
-    if (!finalAnswer.trim() || attemptsRemaining <= 0 || isSubmitting) return;
+    if (e) e.preventDefault();
+    if (!finalAnswer.trim() || attemptsRemaining <= 0 || isSubmitting || feedback === 'correct') return;
 
     setIsSubmitting(true);
     soundEffects.playClick();
 
     const normalized = finalAnswer.trim().toUpperCase().replace(/\s+/g, ' ');
     const acceptedSet = (acceptedAnswersList || []).map((a) => String(a).trim().toUpperCase());
-    
-    // Add default fallbacks for both master riddles so students never get stuck on formatting
+
+    // Valid answers set for both Master Riddles (Internet & A Map)
     const allValid = new Set([
       ...acceptedSet,
       'INTERNET',
@@ -169,7 +57,9 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
         soundEffects.playAccessGranted();
         setFeedback('correct');
         setTimeout(() => {
-          onFinalAnswerAccepted();
+          if (onFinalAnswerAccepted) {
+            onFinalAnswerAccepted();
+          }
         }, 1200);
       } else {
         soundEffects.playAccessDenied();
@@ -182,7 +72,9 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
         soundEffects.playAccessGranted();
         setFeedback('correct');
         setTimeout(() => {
-          onFinalAnswerAccepted();
+          if (onFinalAnswerAccepted) {
+            onFinalAnswerAccepted();
+          }
         }, 1200);
       } else {
         soundEffects.playAccessDenied();
@@ -201,291 +93,242 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
+        justifyContent: 'center',
         padding: '2rem 1.5rem',
-        maxWidth: '880px',
+        maxWidth: '920px',
         margin: '0 auto',
-        width: '100%'
+        width: '100%',
+        minHeight: 'calc(100vh - 70px)'
       }}
     >
       <div className="cyber-bg" />
       <div className="cyber-bg-radial" />
 
-      {/* Top Header Card */}
+      {/* Main Cyber Riddle Panel */}
       <div
         className="cyber-card"
         style={{
           width: '100%',
-          padding: '1.2rem 1.8rem',
-          marginBottom: '1.5rem',
+          padding: 'clamp(1.8rem, 3.5vw, 3rem)',
+          background: 'rgba(7, 13, 27, 0.96)',
+          border: '2px solid var(--neon-cyan)',
+          boxShadow: '0 0 35px rgba(0, 243, 255, 0.25), inset 0 0 30px rgba(0, 0, 0, 0.7)',
+          borderRadius: '12px',
           textAlign: 'center',
-          background: 'rgba(9, 15, 30, 0.9)'
+          backdropFilter: 'blur(20px)'
         }}
       >
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', fontFamily: 'var(--font-mono)' }}>
-          CYBER ESCAPE // MASTER DEFENSE PROTOCOL
+        {/* Top Header Badge */}
+        <div
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.35rem 1.3rem',
+            borderRadius: '4px',
+            background: 'rgba(0, 243, 255, 0.1)',
+            border: '1px solid rgba(0, 243, 255, 0.4)',
+            color: 'var(--neon-cyan)',
+            fontSize: '0.75rem',
+            fontFamily: 'var(--font-mono)',
+            letterSpacing: '2px',
+            textTransform: 'uppercase',
+            marginBottom: '1rem'
+          }}
+        >
+          <Sparkles size={14} /> CYBER ESCAPE // MASTER DEFENSE PROTOCOL
         </div>
-        <h1 className="font-display glow-cyan" style={{ fontSize: '2rem', letterSpacing: '4px', margin: '0.4rem 0' }}>
+
+        <h1
+          className="font-display glow-cyan"
+          style={{
+            fontSize: 'clamp(2rem, 4.5vw, 3rem)',
+            letterSpacing: '4px',
+            margin: '0.2rem 0 0.8rem 0',
+            color: '#fff',
+            textTransform: 'uppercase'
+          }}
+        >
           THE FINAL RIDDLE
         </h1>
-        <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-          Assemble the 4 secret words collected from Rounds 1–4 into the passphrase to reveal the Master Riddle.
-        </div>
-      </div>
 
-      {/* Word Arrangement Matrix */}
-      <div
-        className="cyber-card"
-        style={{
-          width: '100%',
-          padding: '2rem',
-          marginBottom: '1.5rem',
-          background: 'rgba(8, 14, 28, 0.94)',
-          textAlign: 'center'
-        }}
-      >
         <div
           style={{
-            fontSize: '0.8rem',
-            color: 'var(--neon-cyan)',
-            fontFamily: 'var(--font-mono)',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            marginBottom: '1.2rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.4rem'
+            color: 'var(--text-muted)',
+            fontSize: '0.92rem',
+            marginBottom: '2rem',
+            fontFamily: 'var(--font-mono)'
           }}
         >
-          <Move size={16} /> ASSEMBLE OR ENTER CIPHER PHRASE:
+          FINAL CHALLENGE &bull; SQUAD: <strong style={{ color: 'var(--neon-cyan)' }}>{team?.team_name || 'AGENT'}</strong> &bull; SOLVE THE RIDDLE TO WIN
         </div>
 
-        {/* Word Cards */}
+        {/* Riddle Statement Box */}
         <div
           style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '1rem',
-            flexWrap: 'wrap',
-            marginBottom: '1.5rem'
-          }}
-        >
-          {arrangedWords.map((word, idx) => (
-            <div
-              key={word + idx}
-              draggable
-              onDragStart={() => handleDragStart(idx)}
-              onDragOver={handleDragOver}
-              onDrop={() => handleDrop(idx)}
-              style={{
-                padding: '1rem 1.6rem',
-                borderRadius: '8px',
-                background: isSentenceUnlocked ? 'rgba(0, 255, 136, 0.15)' : 'rgba(0, 243, 255, 0.08)',
-                border: `2px solid ${isSentenceUnlocked ? 'var(--neon-green)' : 'var(--neon-cyan)'}`,
-                boxShadow: isSentenceUnlocked ? '0 0 15px var(--neon-green-glow)' : '0 0 10px var(--neon-cyan-glow)',
-                color: isSentenceUnlocked ? 'var(--neon-green)' : 'var(--text-main)',
-                fontFamily: 'var(--font-display)',
-                fontSize: '1.4rem',
-                fontWeight: '700',
-                letterSpacing: '3px',
-                cursor: 'grab',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '0.4rem',
-                userSelect: 'none'
-              }}
-            >
-              <span>{word}</span>
-              <div style={{ display: 'flex', gap: '0.4rem' }}>
-                {idx > 0 && (
-                  <button
-                    onClick={() => handleMoveLeft(idx)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--text-dim)',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem'
-                    }}
-                    title="Move Left"
-                  >
-                    ◀
-                  </button>
-                )}
-                {idx < arrangedWords.length - 1 && (
-                  <button
-                    onClick={() => handleMoveRight(idx)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: 'var(--text-dim)',
-                      cursor: 'pointer',
-                      fontSize: '0.75rem'
-                    }}
-                    title="Move Right"
-                  >
-                    ▶
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Direct Text Input for Passphrase */}
-        {!isSentenceUnlocked ? (
-          <form onSubmit={handleVerifyTypedPhrase} style={{ maxWidth: '520px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '0.8rem' }}>
-              <input
-                type="text"
-                className="cyber-input"
-                placeholder="TYPE: THINK BEFORE YOU ESCAPE"
-                value={typedPhrase}
-                onChange={handlePhraseInputChange}
-                style={{
-                  fontSize: '1rem',
-                  fontWeight: '700',
-                  textAlign: 'center',
-                  letterSpacing: '2px',
-                  textTransform: 'uppercase'
-                }}
-              />
-              <button
-                type="submit"
-                className="cyber-btn cyber-btn-primary"
-                style={{ whiteSpace: 'nowrap', padding: '0.75rem 1.2rem' }}
-              >
-                <Unlock size={16} /> UNLOCK
-              </button>
-            </div>
-
-            {phraseError ? (
-              <div style={{ color: 'var(--neon-red)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
-                {phraseError}
-              </div>
-            ) : (
-              <div style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
-                Rearrange the word tiles above OR type <strong>THINK BEFORE YOU ESCAPE</strong> to reveal the riddle.
-              </div>
-            )}
-          </form>
-        ) : (
-          <div
-            style={{
-              padding: '0.75rem 1.2rem',
-              borderRadius: '6px',
-              background: 'rgba(0, 255, 136, 0.1)',
-              border: '1px solid var(--neon-green)',
-              color: 'var(--neon-green)',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.95rem',
-              fontWeight: '700',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-          >
-            <Check size={18} /> CIPHER PHRASE VALIDATED: &quot;THINK BEFORE YOU ESCAPE&quot;
-          </div>
-        )}
-      </div>
-
-      {/* Master Riddle Statement Card (Revealed Once Passphrase Unlocked) */}
-      {isSentenceUnlocked && (
-        <div
-          className="cyber-card"
-          style={{
-            width: '100%',
-            padding: '2.5rem',
-            background: 'rgba(8, 14, 28, 0.94)',
-            textAlign: 'center',
-            border: '2px solid var(--neon-cyan)',
-            boxShadow: '0 0 25px var(--neon-cyan-glow)',
-            animation: 'fadeIn 0.5s ease-out'
+            background: 'rgba(10, 18, 38, 0.92)',
+            border: '1px solid rgba(0, 243, 255, 0.4)',
+            borderRadius: '10px',
+            padding: '2.2rem 2.4rem',
+            marginBottom: '2.5rem',
+            boxShadow: 'inset 0 0 24px rgba(0, 0, 0, 0.7)'
           }}
         >
           <div
             style={{
-              fontSize: '0.8rem',
+              fontSize: '0.78rem',
               color: 'var(--neon-cyan)',
               fontFamily: 'var(--font-mono)',
               textTransform: 'uppercase',
               letterSpacing: '2px',
-              marginBottom: '0.8rem'
+              marginBottom: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
             }}
           >
-            THE MASTER RIDDLE
+            <HelpCircle size={16} /> MASTER RIDDLE STATEMENT
           </div>
 
           <h2
             style={{
-              fontSize: '1.35rem',
+              fontSize: 'clamp(1.25rem, 2.8vw, 1.65rem)',
               fontWeight: '600',
-              color: '#fff',
+              color: '#ffffff',
               lineHeight: 1.8,
-              marginBottom: '2rem',
-              maxWidth: '700px',
-              margin: '0 auto 2rem auto',
+              margin: '0',
               textTransform: 'none',
               letterSpacing: 'normal',
-              whiteSpace: 'pre-line'
+              whiteSpace: 'pre-line',
+              textShadow: '0 0 20px rgba(255, 255, 255, 0.35)'
             }}
           >
-            {riddleStatement}
+            &ldquo;{riddleStatement}&rdquo;
           </h2>
-
-          {/* Form for Riddle Solution */}
-          <form onSubmit={handleSubmitFinal} style={{ maxWidth: '440px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '1.2rem' }}>
-              <input
-                type="text"
-                className="cyber-input"
-                placeholder="ENTER FINAL WORD"
-                value={finalAnswer}
-                onChange={(e) => setFinalAnswer(e.target.value.toUpperCase())}
-                disabled={feedback === 'correct' || attemptsRemaining <= 0 || isSubmitting}
-                style={{
-                  fontSize: '1.3rem',
-                  fontWeight: '700',
-                  textAlign: 'center',
-                  letterSpacing: '4px',
-                  textTransform: 'uppercase'
-                }}
-                autoFocus
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={!finalAnswer.trim() || attemptsRemaining <= 0 || isSubmitting || feedback === 'correct'}
-              className="cyber-btn cyber-btn-primary"
-              style={{ width: '100%', padding: '0.9rem', fontSize: '1rem' }}
-            >
-              {isSubmitting ? 'VERIFYING...' : 'SUBMIT FINAL ESCAPE ANSWER'}
-            </button>
-          </form>
-
-          {/* Feedback */}
-          <div style={{ marginTop: '1.2rem', minHeight: '24px' }}>
-            {feedback === 'correct' && (
-              <span style={{ color: 'var(--neon-green)', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>
-                ✓ FINAL ANSWER ACCEPTED! RECORDING OFFICIAL SERVER TIMESTAMP...
-              </span>
-            )}
-            {feedback === 'wrong' && attemptsRemaining > 0 && (
-              <span style={{ color: 'var(--neon-red)', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>
-                ✕ INCORRECT ANSWER. ATTEMPTS REMAINING: {attemptsRemaining}
-              </span>
-            )}
-            {attemptsRemaining === 0 && feedback !== 'correct' && (
-              <span style={{ color: 'var(--neon-red)', fontWeight: '700', fontFamily: 'var(--font-mono)' }}>
-                ✕ MAXIMUM ATTEMPTS EXHAUSTED. PLEASE AWAIT ORGANIZER EVALUATION.
-              </span>
-            )}
-          </div>
         </div>
-      )}
+
+        {/* Answer Submission Form */}
+        <form onSubmit={handleSubmitFinal} style={{ maxWidth: '520px', margin: '0 auto' }}>
+          <div style={{ marginBottom: '1.2rem' }}>
+            <input
+              type="text"
+              className="cyber-input"
+              placeholder="ENTER FINAL WORD"
+              value={finalAnswer}
+              onChange={(e) => setFinalAnswer(e.target.value.toUpperCase())}
+              disabled={feedback === 'correct' || attemptsRemaining <= 0 || isSubmitting}
+              style={{
+                fontSize: '1.35rem',
+                fontWeight: '800',
+                textAlign: 'center',
+                letterSpacing: '4px',
+                textTransform: 'uppercase',
+                padding: '1rem',
+                border: '2px solid rgba(0, 243, 255, 0.5)',
+                background: 'rgba(5, 10, 24, 0.9)'
+              }}
+              autoFocus
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={!finalAnswer.trim() || attemptsRemaining <= 0 || isSubmitting || feedback === 'correct'}
+            className="cyber-btn cyber-btn-primary"
+            style={{
+              width: '100%',
+              padding: '1rem 1.5rem',
+              fontSize: '1.05rem',
+              fontWeight: '800',
+              letterSpacing: '2px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.6rem'
+            }}
+          >
+            {isSubmitting ? (
+              'VERIFYING CIPHER...'
+            ) : (
+              <>
+                <Send size={18} /> SUBMIT FINAL ESCAPE ANSWER
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Feedback & Attempts Counter */}
+        <div style={{ marginTop: '1.8rem', minHeight: '36px' }}>
+          {feedback === 'correct' && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                padding: '0.75rem 1.4rem',
+                borderRadius: '6px',
+                background: 'rgba(0, 255, 136, 0.15)',
+                border: '1px solid var(--neon-green)',
+                color: 'var(--neon-green)',
+                fontWeight: '800',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '1rem'
+              }}
+            >
+              <CheckCircle2 size={20} /> FINAL ANSWER ACCEPTED! RECORDING OFFICIAL SERVER TIMESTAMP...
+            </div>
+          )}
+
+          {feedback === 'wrong' && attemptsRemaining > 0 && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                padding: '0.75rem 1.4rem',
+                borderRadius: '6px',
+                background: 'rgba(255, 42, 95, 0.15)',
+                border: '1px solid var(--neon-red)',
+                color: 'var(--neon-red)',
+                fontWeight: '800',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.95rem'
+              }}
+            >
+              <AlertTriangle size={18} /> INCORRECT ANSWER. ATTEMPTS REMAINING: {attemptsRemaining}
+            </div>
+          )}
+
+          {attemptsRemaining === 0 && feedback !== 'correct' && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.6rem',
+                padding: '0.75rem 1.4rem',
+                borderRadius: '6px',
+                background: 'rgba(255, 42, 95, 0.2)',
+                border: '1px solid var(--neon-red)',
+                color: 'var(--neon-red)',
+                fontWeight: '800',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.95rem'
+              }}
+            >
+              ✕ MAXIMUM ATTEMPTS EXHAUSTED. PLEASE AWAIT ORGANIZER EVALUATION.
+            </div>
+          )}
+
+          {!feedback && (
+            <div style={{ color: 'var(--text-dim)', fontSize: '0.85rem', fontFamily: 'var(--font-mono)' }}>
+              ATTEMPTS ALLOWED: {attemptsRemaining} / {GAME_CONFIG.FINAL_CHALLENGE.MAX_ATTEMPTS || 2}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
+
+export default FinalRiddlePage;

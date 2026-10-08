@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Clock, Shield, KeyRound, Check, X, HelpCircle, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Clock, Shield, KeyRound, Check, X, HelpCircle, AlertTriangle, ArrowRight, Unlock } from 'lucide-react';
 import { soundEffects } from '../../utils/soundEffects';
 import { questionService } from '../../services/questionService';
 import { teamService } from '../../services/teamService';
 import { CodeRevealModal } from '../../components/CodeRevealModal';
+import { DEMO_ROUND_1_QUESTIONS } from '../../constants/demoData';
 import { GAME_CONFIG } from '../../constants/gameConfig';
 import { seededShuffle } from '../../utils/shuffleUtils';
 
 export function Round1Page({ team, onRoundComplete }) {
   const [questions, setQuestions] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [stage, setStage] = useState('A'); // 'A' = 15s Question Only, 'B' = 30s Options View
-  const [stageTimer, setStageTimer] = useState(GAME_CONFIG.ROUND_1.QUESTION_VIEW_SECONDS);
+  const [stage, setStage] = useState('A'); // 'A' = 15s Question Statement, 'B' = 30s Options View
+  const [stageTimer, setStageTimer] = useState(GAME_CONFIG.ROUND_1.QUESTION_VIEW_SECONDS || 15);
   const [selectedOption, setSelectedOption] = useState(null);
   const [submissionStatus, setSubmissionStatus] = useState(null); // 'correct' | 'wrong' | 'attempt_failed' | null
   const [chancesLeft, setChancesLeft] = useState(2);
@@ -25,20 +26,33 @@ export function Round1Page({ team, onRoundComplete }) {
 
   const timerRef = useRef(null);
 
+  // Helper to clean options
+  function cleanOptionText(opt) {
+    return String(opt || '').replace(/^[A-Da-d][\.\:\)\-]\s*/, '').trim();
+  }
+
+  function updateCodeLetters(solvedCount) {
+    // 4-letter key 'NODE' unlocked in scrambled anagram format ['O', 'N', 'E', 'D']
+    const scrambled = GAME_CONFIG.ROUND_1.SCRAMBLED_LETTERS || ['O', 'N', 'E', 'D'];
+    const lettersUnlockedCount = Math.min(4, solvedCount);
+    setUnlockedCodeLetters(scrambled.slice(0, lettersUnlockedCount));
+  }
+
   // Fetch Questions and initial team progress
   useEffect(() => {
     async function loadData() {
       try {
         const qList = await questionService.getQuestionsForRound(1);
-        const shuffledList = seededShuffle(qList, team?.team_key_hash || team?.id);
+        const listToUse = qList && qList.length > 0 ? qList : DEMO_ROUND_1_QUESTIONS;
+        const shuffledList = seededShuffle(listToUse, team?.team_key_hash || team?.id);
         setQuestions(shuffledList);
 
         if (team?.id) {
           const progress = await teamService.getTeamProgress(team.id, 1);
           if (progress?.solvedQuestionNumbers) {
-            setSolvedQuestions(new Set(progress.solvedQuestionNumbers));
-            // Calculate code segments unlocked based on solved count
-            updateCodeLetters(progress.solvedCount);
+            const solved = new Set(progress.solvedQuestionNumbers);
+            setSolvedQuestions(solved);
+            updateCodeLetters(solved.size);
           }
           const words = await teamService.getTeamWords(team.id);
           const r1Word = words.find((w) => w.round_number === 1);
@@ -48,6 +62,7 @@ export function Round1Page({ team, onRoundComplete }) {
         }
       } catch (err) {
         console.error('Error loading Round 1:', err);
+        setQuestions(DEMO_ROUND_1_QUESTIONS);
       } finally {
         setLoading(false);
       }
@@ -55,50 +70,45 @@ export function Round1Page({ team, onRoundComplete }) {
     loadData();
   }, [team?.id]);
 
-  function cleanOptionText(opt) {
-    return String(opt || '').replace(/^[A-Da-d][\.\:\)\-]\s*/, '').trim();
-  }
-
-  function updateCodeLetters(solvedCount) {
-    // 4-letter key 'NODE' unlocked in scrambled anagram format ['O', 'N', 'E', 'D']
-    const scrambled = GAME_CONFIG.ROUND_1.SCRAMBLED_LETTERS || ['O', 'N', 'E', 'D'];
-    const lettersUnlockedCount = Math.min(4, Math.floor(solvedCount / 2));
-    setUnlockedCodeLetters(scrambled.slice(0, lettersUnlockedCount));
-  }
-
-  // 15s Stage A -> 30s Stage B countdown
+  // Unified, atomic dual-stage countdown timer
   useEffect(() => {
     if (submissionStatus === 'correct' || submissionStatus === 'wrong') return;
 
     timerRef.current = setInterval(() => {
       setStageTimer((prev) => {
-        if (prev <= 1) {
+        if (prev > 1) {
+          if (prev <= 6) {
+            soundEffects.playWarningTick();
+          }
+          return prev - 1;
+        }
+
+        // When counter drops to 1 -> 0
+        if (stage === 'A') {
+          soundEffects.playTyping();
+          setStage('B');
+          return GAME_CONFIG.ROUND_1.OPTION_VIEW_SECONDS || 30;
+        } else {
+          // Timer expired in Stage B
+          soundEffects.playAccessDenied();
+          setChancesLeft(0);
+          setSubmissionStatus('wrong');
           return 0;
         }
-        if (prev <= 6) {
-          soundEffects.playWarningTick();
-        }
-        return prev - 1;
       });
     }, 1000);
 
     return () => clearInterval(timerRef.current);
   }, [stage, submissionStatus, currentIndex]);
 
-  // Clean dual-stage transition when timer reaches 0
-  useEffect(() => {
-    if (stageTimer === 0) {
-      if (stage === 'A') {
-        soundEffects.playTyping();
-        setStage('B');
-        setStageTimer(GAME_CONFIG.ROUND_1.OPTION_VIEW_SECONDS);
-      } else if (stage === 'B' && submissionStatus !== 'correct' && submissionStatus !== 'wrong') {
-        soundEffects.playAccessDenied();
-        setChancesLeft(0);
-        setSubmissionStatus('wrong');
-      }
+  // Fast forward to options if team finished reading early
+  const handleSkipToOptions = () => {
+    if (stage === 'A') {
+      soundEffects.playTyping();
+      setStage('B');
+      setStageTimer(GAME_CONFIG.ROUND_1.OPTION_VIEW_SECONDS || 30);
     }
-  }, [stageTimer, stage, submissionStatus]);
+  };
 
   const handleSelectOption = async (option) => {
     if (
@@ -117,21 +127,30 @@ export function Round1Page({ team, onRoundComplete }) {
     soundEffects.playClick();
 
     const currentQ = questions[currentIndex];
-    const timeTaken = GAME_CONFIG.ROUND_1.TOTAL_TIME_PER_QUESTION - stageTimer;
+    const timeTaken = (GAME_CONFIG.ROUND_1.TOTAL_TIME_PER_QUESTION || 45) - stageTimer;
     const cleanedOption = cleanOptionText(option);
 
-    // Local answer validation fallback
-    const rawExpected = currentQ?.correct_answer || '';
+    // Guaranteed lookup of expected answer from question or demo data
+    const demoQ = DEMO_ROUND_1_QUESTIONS.find((item) => item.question_number === currentQ.question_number);
+    const rawExpected = currentQ?.correct_answer || demoQ?.correct_answer || '';
     const normExpected = cleanOptionText(rawExpected).toUpperCase();
     const normSubmitted = cleanedOption.toUpperCase();
+
+    // Check matching by text, substrings, or option index
+    const optionIndex = (currentQ?.question_data?.options || []).indexOf(option);
+    const expectedIndex = (currentQ?.question_data?.options || []).findIndex(
+      (opt) => cleanOptionText(opt).toUpperCase() === normExpected
+    );
+
     const isLocallyCorrect =
       normExpected === normSubmitted ||
+      (optionIndex !== -1 && expectedIndex !== -1 && optionIndex === expectedIndex) ||
       (normExpected.length > 2 && normSubmitted.includes(normExpected)) ||
       (normSubmitted.length > 2 && normExpected.includes(normSubmitted));
 
     try {
       const res = await questionService.submitAnswer(
-        team.id,
+        team?.id,
         1,
         currentQ.question_number,
         cleanedOption,
@@ -152,10 +171,8 @@ export function Round1Page({ team, onRoundComplete }) {
         setWrongOptions((prev) => new Set(prev).add(option));
 
         if (remaining > 0) {
-          // Attempt 1 failed - 1 chance remaining, keep timer ticking
           setSubmissionStatus('attempt_failed');
         } else {
-          // Both chances exhausted
           setSubmissionStatus('wrong');
         }
       }
@@ -185,7 +202,7 @@ export function Round1Page({ team, onRoundComplete }) {
     if (currentIndex < questions.length - 1) {
       setCurrentIndex((prev) => prev + 1);
       setStage('A');
-      setStageTimer(GAME_CONFIG.ROUND_1.QUESTION_VIEW_SECONDS);
+      setStageTimer(GAME_CONFIG.ROUND_1.QUESTION_VIEW_SECONDS || 15);
       setSelectedOption(null);
       setSubmissionStatus(null);
       setChancesLeft(2);
@@ -384,7 +401,7 @@ export function Round1Page({ team, onRoundComplete }) {
                 letterSpacing: '1px'
               }}
             >
-              QUESTION 0{currentQ.question_number} // DIFFICULTY: {currentQ.difficulty.toUpperCase()}
+              QUESTION 0{currentQ.question_number} // DIFFICULTY: {String(currentQ.difficulty || 'EASY').toUpperCase()}
             </span>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -392,13 +409,22 @@ export function Round1Page({ team, onRoundComplete }) {
                 style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: '0.8rem',
-                  color: chancesLeft === 2 ? 'var(--neon-cyan)' : chancesLeft === 1 ? 'var(--neon-amber)' : 'var(--neon-red)',
+                  color:
+                    chancesLeft === 2
+                      ? 'var(--neon-cyan)'
+                      : chancesLeft === 1
+                      ? 'var(--neon-amber)'
+                      : 'var(--neon-red)',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.3rem'
                 }}
               >
-                {chancesLeft === 2 ? '2 CHANCES REMAINING' : chancesLeft === 1 ? '⚠️ 1 CHANCE REMAINING' : '0 CHANCES LEFT'}
+                {chancesLeft === 2
+                  ? '2 CHANCES REMAINING'
+                  : chancesLeft === 1
+                  ? '⚠️ 1 CHANCE REMAINING'
+                  : '0 CHANCES LEFT'}
               </span>
 
               {isQuestionAlreadySolved && (
@@ -428,10 +454,11 @@ export function Round1Page({ team, onRoundComplete }) {
               marginBottom: '2rem',
               fontFamily: 'var(--font-body)',
               textTransform: 'none',
-              letterSpacing: 'normal'
+              letterSpacing: 'normal',
+              whiteSpace: 'pre-line'
             }}
           >
-            {currentQ.question_data.question}
+            {currentQ.question_data?.question || currentQ.question}
           </h2>
 
           {/* Options Display */}
@@ -449,13 +476,41 @@ export function Round1Page({ team, onRoundComplete }) {
                 fontSize: '0.95rem'
               }}
             >
-              <div style={{ marginBottom: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              <div
+                style={{
+                  marginBottom: '0.6rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
                 <span className="pulse-dot" style={{ display: 'inline-block' }} />
-                <span style={{ letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>READ QUESTION STATEMENT</span>
+                <span style={{ letterSpacing: '1px', textTransform: 'uppercase', fontWeight: '700' }}>
+                  READ QUESTION STATEMENT
+                </span>
               </div>
-              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem' }}>
-                OPTIONS WILL UNLOCK IN <strong style={{ color: 'var(--neon-cyan)', fontSize: '1.15rem' }}>{stageTimer}s</strong> &bull; (2 CHANCES ALLOWED)
+              <div style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '1.2rem' }}>
+                OPTIONS WILL UNLOCK IN{' '}
+                <strong style={{ color: 'var(--neon-cyan)', fontSize: '1.15rem' }}>{stageTimer}s</strong> &bull; (2
+                CHANCES ALLOWED)
               </div>
+              <button
+                onClick={handleSkipToOptions}
+                className="cyber-btn"
+                style={{
+                  fontSize: '0.84rem',
+                  padding: '0.5rem 1.4rem',
+                  borderColor: 'var(--neon-cyan)',
+                  color: 'var(--neon-cyan)',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+              >
+                <Unlock size={14} /> UNLOCK OPTIONS NOW &rarr;
+              </button>
             </div>
           ) : (
             /* Stage B: Options Unlocked */
@@ -479,13 +534,14 @@ export function Round1Page({ team, onRoundComplete }) {
                 >
                   <AlertTriangle size={20} style={{ flexShrink: 0 }} />
                   <div>
-                    <strong>INCORRECT ATTEMPT!</strong> You have <strong>1 CHANCE REMAINING</strong>. Select another option before the timer runs out!
+                    <strong>INCORRECT ATTEMPT!</strong> You have <strong>1 CHANCE REMAINING</strong>. Select another
+                    option before the timer runs out!
                   </div>
                 </div>
               )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.9rem' }}>
-                {currentQ.question_data.options.map((opt, i) => {
+                {(currentQ.question_data?.options || []).map((opt, i) => {
                   const isSelected = selectedOption === opt;
                   const isWrongAttempt = wrongOptions.has(opt);
                   const isOptionDisabled =
@@ -563,7 +619,9 @@ export function Round1Page({ team, onRoundComplete }) {
             paddingTop: '1.2rem',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '1rem'
           }}
         >
           {/* Submission feedback */}
@@ -642,7 +700,7 @@ export function Round1Page({ team, onRoundComplete }) {
       <CodeRevealModal
         isOpen={showCodeModal}
         onClose={() => setShowCodeModal(false)}
-        teamId={team.id}
+        teamId={team?.id}
         roundNumber={1}
         unlockedCodeLetters={unlockedCodeLetters}
         totalLettersNeeded={4}
@@ -654,3 +712,5 @@ export function Round1Page({ team, onRoundComplete }) {
     </div>
   );
 }
+
+export default Round1Page;

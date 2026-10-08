@@ -240,6 +240,30 @@ export function CodeRevealModal({
                   ✕ {errorMsg}
                 </div>
               )}
+
+              <div style={{ textAlign: 'center', marginTop: '1rem' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundEffects.playClick();
+                    onClose();
+                    if (onRoundComplete) {
+                      onRoundComplete();
+                    }
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-dim)',
+                    fontSize: '0.82rem',
+                    textDecoration: 'underline',
+                    cursor: 'pointer',
+                    fontFamily: 'var(--font-mono)'
+                  }}
+                >
+                  Proceed to evaluation waiting room without code &rarr;
+                </button>
+              </div>
             </form>
           </div>
         ) : (

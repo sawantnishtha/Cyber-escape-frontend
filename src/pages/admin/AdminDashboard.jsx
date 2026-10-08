@@ -141,6 +141,14 @@ export function AdminDashboard({ admin, gameSession, onResetDemo }) {
             await adminService.updateAllTeamsStatus('active', targetRound);
           }
 
+          if (targetState === GAME_STATES.FINAL_RIDDLE) {
+            const round4Map = roundQualifications[4] || {};
+            const selectedIds = Object.keys(round4Map).filter((id) => round4Map[id]);
+            if (selectedIds.length > 0) {
+              await adminService.confirmRoundSelections(activeAdminKey, 4, selectedIds);
+            }
+          }
+
           await adminService.setGameState(activeAdminKey, targetState, targetRound);
           soundEffects.playAccessGranted();
           showConsoleNotice(`BROADCAST DISPATCHED: ${actionLabel.toUpperCase()} (${targetState})`);

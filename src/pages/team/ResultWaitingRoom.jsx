@@ -27,7 +27,7 @@ const CYBER_ROUND_PROGRESSION = {
   }
 };
 
-export function ResultWaitingRoom({ team, roundNumber, gameSession }) {
+export function ResultWaitingRoom({ team, roundNumber, gameSession, onEnterFinalRiddle }) {
   const [teamSelection, setTeamSelection] = useState(null);
   const [currentTeamStatus, setCurrentTeamStatus] = useState(team?.status);
   const [roundWord, setRoundWord] = useState(null);
@@ -618,6 +618,31 @@ export function ResultWaitingRoom({ team, roundNumber, gameSession }) {
               >
                 SELECTED - PROCEED TO {progression.nextTitle}
               </span>
+              {roundNumber === 4 && (
+                <button
+                  onClick={() => {
+                    if (onEnterFinalRiddle) onEnterFinalRiddle();
+                  }}
+                  style={{
+                    marginLeft: 'auto',
+                    background: 'linear-gradient(135deg, #00f3ff, #00ff88)',
+                    color: '#000',
+                    border: 'none',
+                    borderRadius: '5px',
+                    padding: '0.45rem 1.2rem',
+                    fontWeight: '900',
+                    fontSize: '0.85rem',
+                    letterSpacing: '1px',
+                    cursor: 'pointer',
+                    boxShadow: '0 0 15px rgba(0, 243, 255, 0.4)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
+                  }}
+                >
+                  <KeyRound size={15} /> ENTER THE FINAL RIDDLE DIRECTLY
+                </button>
+              )}
             </div>
           ) : isEliminated ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem', flexWrap: 'wrap' }}>
