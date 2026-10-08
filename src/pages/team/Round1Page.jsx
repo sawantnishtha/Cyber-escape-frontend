@@ -55,6 +55,10 @@ export function Round1Page({ team, onRoundComplete }) {
     loadData();
   }, [team?.id]);
 
+  function cleanOptionText(opt) {
+    return String(opt || '').replace(/^[A-Da-d][\.\:\)\-]\s*/, '').trim();
+  }
+
   function updateCodeLetters(solvedCount) {
     // 4-letter key 'NODE' unlocked in scrambled anagram format ['O', 'N', 'E', 'D']
     const scrambled = GAME_CONFIG.ROUND_1.SCRAMBLED_LETTERS || ['O', 'N', 'E', 'D'];
@@ -64,26 +68,14 @@ export function Round1Page({ team, onRoundComplete }) {
 
   // 15s Stage A -> 30s Stage B countdown
   useEffect(() => {
-    // Only stop timer when the question has finished (correct or all chances exhausted)
     if (submissionStatus === 'correct' || submissionStatus === 'wrong') return;
 
     timerRef.current = setInterval(() => {
       setStageTimer((prev) => {
         if (prev <= 1) {
-          if (stage === 'A') {
-            soundEffects.playTyping();
-            setStage('B');
-            return GAME_CONFIG.ROUND_1.OPTION_VIEW_SECONDS;
-          } else {
-            // Stage B timed out without answer or after 1st attempt
-            soundEffects.playAccessDenied();
-            setChancesLeft(0);
-            setSubmissionStatus('wrong');
-            clearInterval(timerRef.current);
-            return 0;
-          }
+          return 0;
         }
-        if (prev <= 5) {
+        if (prev <= 6) {
           soundEffects.playWarningTick();
         }
         return prev - 1;
@@ -92,6 +84,21 @@ export function Round1Page({ team, onRoundComplete }) {
 
     return () => clearInterval(timerRef.current);
   }, [stage, submissionStatus, currentIndex]);
+
+  // Clean dual-stage transition when timer reaches 0
+  useEffect(() => {
+    if (stageTimer === 0) {
+      if (stage === 'A') {
+        soundEffects.playTyping();
+        setStage('B');
+        setStageTimer(GAME_CONFIG.ROUND_1.OPTION_VIEW_SECONDS);
+      } else if (stage === 'B' && submissionStatus !== 'correct' && submissionStatus !== 'wrong') {
+        soundEffects.playAccessDenied();
+        setChancesLeft(0);
+        setSubmissionStatus('wrong');
+      }
+    }
+  }, [stageTimer, stage, submissionStatus]);
 
   const handleSelectOption = async (option) => {
     if (
@@ -111,17 +118,27 @@ export function Round1Page({ team, onRoundComplete }) {
 
     const currentQ = questions[currentIndex];
     const timeTaken = GAME_CONFIG.ROUND_1.TOTAL_TIME_PER_QUESTION - stageTimer;
+    const cleanedOption = cleanOptionText(option);
+
+    // Local answer validation fallback
+    const rawExpected = currentQ?.correct_answer || '';
+    const normExpected = cleanOptionText(rawExpected).toUpperCase();
+    const normSubmitted = cleanedOption.toUpperCase();
+    const isLocallyCorrect =
+      normExpected === normSubmitted ||
+      (normExpected.length > 2 && normSubmitted.includes(normExpected)) ||
+      (normSubmitted.length > 2 && normExpected.includes(normSubmitted));
 
     try {
       const res = await questionService.submitAnswer(
         team.id,
         1,
         currentQ.question_number,
-        option,
+        cleanedOption,
         timeTaken
       );
 
-      if (res.is_correct) {
+      if (res?.is_correct || isLocallyCorrect) {
         soundEffects.playAccessGranted();
         setSubmissionStatus('correct');
         const nextSolved = new Set(solvedQuestions);
@@ -144,6 +161,20 @@ export function Round1Page({ team, onRoundComplete }) {
       }
     } catch (err) {
       console.error('Submission error:', err);
+      if (isLocallyCorrect) {
+        soundEffects.playAccessGranted();
+        setSubmissionStatus('correct');
+        const nextSolved = new Set(solvedQuestions);
+        nextSolved.add(currentQ.question_number);
+        setSolvedQuestions(nextSolved);
+        updateCodeLetters(nextSolved.size);
+      } else {
+        soundEffects.playAccessDenied();
+        const remaining = chancesLeft - 1;
+        setChancesLeft(remaining);
+        setWrongOptions((prev) => new Set(prev).add(option));
+        setSubmissionStatus(remaining > 0 ? 'attempt_failed' : 'wrong');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -515,7 +546,7 @@ export function Round1Page({ team, onRoundComplete }) {
                       >
                         {isWrongAttempt ? <X size={14} /> : String.fromCharCode(65 + i)}
                       </span>
-                      <span>{opt}</span>
+                      <span>{cleanOptionText(opt)}</span>
                     </button>
                   );
                 })}

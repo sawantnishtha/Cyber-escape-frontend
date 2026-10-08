@@ -236,10 +236,33 @@ class SimulatorEngine {
 
     const cleanExpected = String(expected).trim().toUpperCase();
     const cleanSubmitted = String(submittedAnswer).trim().toUpperCase();
-    const isCorrect =
+
+    const norm = (s) => String(s || '').trim().toUpperCase().replace(/^[A-D][\.\:\)\-]\s*/, '');
+    const normExp = norm(expected);
+    const normSub = norm(submittedAnswer);
+
+    let isCorrect =
+      normExp === normSub ||
       cleanExpected === cleanSubmitted ||
-      cleanExpected.replace(/\s+/g, ' ') === cleanSubmitted.replace(/\s+/g, ' ') ||
-      cleanExpected.split(',').map((s) => s.trim()).join(',') === cleanSubmitted.split(',').map((s) => s.trim()).join(',');
+      normExp.replace(/\s+/g, ' ') === normSub.replace(/\s+/g, ' ') ||
+      cleanExpected.split(',').map((s) => s.trim()).join(',') === cleanSubmitted.split(',').map((s) => s.trim()).join(',') ||
+      normExp.split(',').map((s) => s.trim()).join(',') === normSub.split(',').map((s) => s.trim()).join(',') ||
+      (normExp.length > 2 && normSub.includes(normExp)) ||
+      (normSub.length > 2 && normExp.includes(normSub));
+
+    // MCQ option letter check (e.g. user selected option 'A' or 'Switch')
+    if (!isCorrect && roundNumber === 1) {
+      const q = DEMO_ROUND_1_QUESTIONS.find((item) => item.question_number === questionNumber);
+      if (q?.question_data?.options) {
+        const optionIndex = q.question_data.options.findIndex((opt) => norm(opt) === normExp);
+        if (optionIndex !== -1) {
+          const expectedLetter = String.fromCharCode(65 + optionIndex);
+          if (cleanSubmitted === expectedLetter || cleanSubmitted.startsWith(expectedLetter + '.')) {
+            isCorrect = true;
+          }
+        }
+      }
+    }
 
     // Check attempts count for this team and question
     const prevAttempts = state.teamQuestions.filter(

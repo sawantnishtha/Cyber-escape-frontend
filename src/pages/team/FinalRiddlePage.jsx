@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, HelpCircle, Key, ArrowRight, Check, X, ShieldAlert, Move } from 'lucide-react';
+import { Sparkles, HelpCircle, Key, ArrowRight, Check, X, ShieldAlert, Move, Unlock, Lock } from 'lucide-react';
 import { soundEffects } from '../../utils/soundEffects';
 import { teamService } from '../../services/teamService';
 import { codeService } from '../../services/codeService';
@@ -10,34 +10,46 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
   const riddleIndex = getTeamRiddleIndex(team?.team_key_hash || team?.id || '');
   const assignedRiddle =
     (GAME_CONFIG.FINAL_CHALLENGE.RIDDLES && GAME_CONFIG.FINAL_CHALLENGE.RIDDLES[riddleIndex]) ||
-    { riddle: GAME_CONFIG.FINAL_CHALLENGE.RIDDLE_TEXT, answers: ['INTERNET', 'A MAP'] };
+    GAME_CONFIG.FINAL_CHALLENGE.RIDDLES?.[0] || {
+      question: GAME_CONFIG.FINAL_CHALLENGE.RIDDLE_TEXT,
+      answer: 'INTERNET',
+      acceptedAnswers: ['INTERNET', 'THE INTERNET']
+    };
+
+  const riddleStatement =
+    assignedRiddle?.question || assignedRiddle?.riddle || GAME_CONFIG.FINAL_CHALLENGE.RIDDLE_TEXT;
+  const acceptedAnswersList =
+    assignedRiddle?.acceptedAnswers ||
+    assignedRiddle?.answers ||
+    [assignedRiddle?.answer, 'INTERNET', 'A MAP'].filter(Boolean);
 
   const [collectedWords, setCollectedWords] = useState(['THINK', 'BEFORE', 'YOU', 'ESCAPE']);
   const [arrangedWords, setArrangedWords] = useState(['ESCAPE', 'YOU', 'BEFORE', 'THINK']); // Initially scrambled
   const [draggedIndex, setDraggedIndex] = useState(null);
+  const [typedPhrase, setTypedPhrase] = useState('');
+  const [phraseError, setPhraseError] = useState('');
   const [isSentenceUnlocked, setIsSentenceUnlocked] = useState(false);
   const [finalAnswer, setFinalAnswer] = useState('');
-  const [attemptsRemaining, setAttemptsRemaining] = useState(GAME_CONFIG.FINAL_CHALLENGE.MAX_ATTEMPTS);
+  const [attemptsRemaining, setAttemptsRemaining] = useState(GAME_CONFIG.FINAL_CHALLENGE.MAX_ATTEMPTS || 2);
   const [feedback, setFeedback] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function loadWords() {
-      if (!team?.id) return;
+      if (!team?.id) {
+        setLoading(false);
+        return;
+      }
       try {
         const wordsData = await teamService.getTeamWords(team.id);
         if (wordsData && wordsData.length > 0) {
           const list = wordsData.map((w) => w.word.toUpperCase());
-          // Ensure we have all 4 demo words or defaults
           const complete = ['THINK', 'BEFORE', 'YOU', 'ESCAPE'];
           list.forEach((w) => {
             if (!complete.includes(w)) complete.push(w);
           });
           setCollectedWords(complete);
-          // Shuffle initially
-          const shuffled = [...complete].sort(() => 0.5 - Math.random());
-          setArrangedWords(shuffled);
         }
       } catch (err) {
         console.error('Error loading team words:', err);
@@ -50,13 +62,42 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
 
   // Check if current arrangement matches target sentence
   useEffect(() => {
-    const target = GAME_CONFIG.FINAL_CHALLENGE.TARGET_SENTENCE;
+    const target = GAME_CONFIG.FINAL_CHALLENGE.TARGET_SENTENCE || ['THINK', 'BEFORE', 'YOU', 'ESCAPE'];
     const isMatch = arrangedWords.length === target.length && arrangedWords.every((w, i) => w === target[i]);
     if (isMatch && !isSentenceUnlocked) {
       soundEffects.playAccessGranted();
       setIsSentenceUnlocked(true);
+      setTypedPhrase('THINK BEFORE YOU ESCAPE');
+      setPhraseError('');
     }
   }, [arrangedWords, isSentenceUnlocked]);
+
+  // Handle typing or direct entry of passphrase
+  const handleVerifyTypedPhrase = (e) => {
+    if (e) e.preventDefault();
+    const cleanTyped = typedPhrase.trim().toUpperCase().replace(/\s+/g, ' ');
+    if (cleanTyped === 'THINK BEFORE YOU ESCAPE') {
+      soundEffects.playAccessGranted();
+      setIsSentenceUnlocked(true);
+      setArrangedWords(['THINK', 'BEFORE', 'YOU', 'ESCAPE']);
+      setPhraseError('');
+    } else {
+      soundEffects.playAccessDenied();
+      setPhraseError('Incorrect phrase. Enter the 4 secret words: "THINK BEFORE YOU ESCAPE"');
+    }
+  };
+
+  const handlePhraseInputChange = (e) => {
+    const val = e.target.value;
+    setTypedPhrase(val);
+    const cleanTyped = val.trim().toUpperCase().replace(/\s+/g, ' ');
+    if (cleanTyped === 'THINK BEFORE YOU ESCAPE' && !isSentenceUnlocked) {
+      soundEffects.playAccessGranted();
+      setIsSentenceUnlocked(true);
+      setArrangedWords(['THINK', 'BEFORE', 'YOU', 'ESCAPE']);
+      setPhraseError('');
+    }
+  };
 
   // Drag and drop handlers
   const handleDragStart = (index) => {
@@ -106,13 +147,24 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
     setIsSubmitting(true);
     soundEffects.playClick();
 
-    const normalized = finalAnswer.trim().toUpperCase();
-    const localMatch = assignedRiddle.answers.some(
-      (a) => a.toUpperCase() === normalized || normalized.includes(a.toUpperCase())
-    );
+    const normalized = finalAnswer.trim().toUpperCase().replace(/\s+/g, ' ');
+    const acceptedSet = (acceptedAnswersList || []).map((a) => String(a).trim().toUpperCase());
+    
+    // Add default fallbacks for both master riddles so students never get stuck on formatting
+    const allValid = new Set([
+      ...acceptedSet,
+      'INTERNET',
+      'THE INTERNET',
+      'A MAP',
+      'MAP',
+      'THE MAP',
+      'CODE'
+    ]);
+
+    const localMatch = allValid.has(normalized) || [...allValid].some((a) => normalized.includes(a));
 
     try {
-      const res = await codeService.submitFinalAnswer(team.id, finalAnswer.trim());
+      const res = await codeService.submitFinalAnswer(team?.id, finalAnswer.trim());
       if ((res && res.is_correct) || localMatch) {
         soundEffects.playAccessGranted();
         setFeedback('correct');
@@ -122,7 +174,7 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
       } else {
         soundEffects.playAccessDenied();
         setFeedback('wrong');
-        setAttemptsRemaining(res?.attempts_remaining ?? attemptsRemaining - 1);
+        setAttemptsRemaining(res?.attempts_remaining ?? Math.max(0, attemptsRemaining - 1));
       }
     } catch (err) {
       console.error('Final answer submission error:', err);
@@ -132,6 +184,10 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
         setTimeout(() => {
           onFinalAnswerAccepted();
         }, 1200);
+      } else {
+        soundEffects.playAccessDenied();
+        setFeedback('wrong');
+        setAttemptsRemaining((prev) => Math.max(0, prev - 1));
       }
     } finally {
       setIsSubmitting(false);
@@ -172,7 +228,7 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
           THE FINAL RIDDLE
         </h1>
         <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-          Reconstruct the sequence of your 4 decrypted round words to synthesize the master cryptographic riddle.
+          Assemble the 4 secret words collected from Rounds 1–4 into the passphrase to reveal the Master Riddle.
         </div>
       </div>
 
@@ -181,7 +237,7 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
         className="cyber-card"
         style={{
           width: '100%',
-          padding: '2.5rem',
+          padding: '2rem',
           marginBottom: '1.5rem',
           background: 'rgba(8, 14, 28, 0.94)',
           textAlign: 'center'
@@ -201,7 +257,7 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
             gap: '0.4rem'
           }}
         >
-          <Move size={16} /> DRAG OR ARRANGE WORDS INTO THE PROPER CIPHER PHRASE:
+          <Move size={16} /> ASSEMBLE OR ENTER CIPHER PHRASE:
         </div>
 
         {/* Word Cards */}
@@ -277,26 +333,65 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
           ))}
         </div>
 
-        {/* Status of sentence */}
-        {isSentenceUnlocked ? (
+        {/* Direct Text Input for Passphrase */}
+        {!isSentenceUnlocked ? (
+          <form onSubmit={handleVerifyTypedPhrase} style={{ maxWidth: '520px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', gap: '0.6rem', marginBottom: '0.8rem' }}>
+              <input
+                type="text"
+                className="cyber-input"
+                placeholder="TYPE: THINK BEFORE YOU ESCAPE"
+                value={typedPhrase}
+                onChange={handlePhraseInputChange}
+                style={{
+                  fontSize: '1rem',
+                  fontWeight: '700',
+                  textAlign: 'center',
+                  letterSpacing: '2px',
+                  textTransform: 'uppercase'
+                }}
+              />
+              <button
+                type="submit"
+                className="cyber-btn cyber-btn-primary"
+                style={{ whiteSpace: 'nowrap', padding: '0.75rem 1.2rem' }}
+              >
+                <Unlock size={16} /> UNLOCK
+              </button>
+            </div>
+
+            {phraseError ? (
+              <div style={{ color: 'var(--neon-red)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
+                {phraseError}
+              </div>
+            ) : (
+              <div style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
+                Rearrange the word tiles above OR type <strong>THINK BEFORE YOU ESCAPE</strong> to reveal the riddle.
+              </div>
+            )}
+          </form>
+        ) : (
           <div
             style={{
+              padding: '0.75rem 1.2rem',
+              borderRadius: '6px',
+              background: 'rgba(0, 255, 136, 0.1)',
+              border: '1px solid var(--neon-green)',
               color: 'var(--neon-green)',
               fontFamily: 'var(--font-mono)',
-              fontSize: '0.9rem',
-              fontWeight: '700'
+              fontSize: '0.95rem',
+              fontWeight: '700',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem'
             }}
           >
-            ✓ CIPHER PHRASE VALIDATED: "THINK BEFORE YOU ESCAPE"
-          </div>
-        ) : (
-          <div style={{ color: 'var(--text-dim)', fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>
-            Arrange the words in grammatical & logical sequence to unlock the riddle prompt.
+            <Check size={18} /> CIPHER PHRASE VALIDATED: &quot;THINK BEFORE YOU ESCAPE&quot;
           </div>
         )}
       </div>
 
-      {/* Riddle Statement Card (Appears after sentence is arranged) */}
+      {/* Master Riddle Statement Card (Revealed Once Passphrase Unlocked) */}
       {isSentenceUnlocked && (
         <div
           className="cyber-card"
@@ -325,23 +420,23 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
 
           <h2
             style={{
-              fontSize: '1.25rem',
+              fontSize: '1.35rem',
               fontWeight: '600',
               color: '#fff',
-              lineHeight: 1.7,
+              lineHeight: 1.8,
               marginBottom: '2rem',
-              maxWidth: '650px',
+              maxWidth: '700px',
               margin: '0 auto 2rem auto',
               textTransform: 'none',
               letterSpacing: 'normal',
               whiteSpace: 'pre-line'
             }}
           >
-            {assignedRiddle.riddle}
+            {riddleStatement}
           </h2>
 
-          {/* Form */}
-          <form onSubmit={handleSubmitFinal} style={{ maxWidth: '420px', margin: '0 auto' }}>
+          {/* Form for Riddle Solution */}
+          <form onSubmit={handleSubmitFinal} style={{ maxWidth: '440px', margin: '0 auto' }}>
             <div style={{ marginBottom: '1.2rem' }}>
               <input
                 type="text"
@@ -365,9 +460,9 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
               type="submit"
               disabled={!finalAnswer.trim() || attemptsRemaining <= 0 || isSubmitting || feedback === 'correct'}
               className="cyber-btn cyber-btn-primary"
-              style={{ width: '100%', padding: '0.85rem' }}
+              style={{ width: '100%', padding: '0.9rem', fontSize: '1rem' }}
             >
-              {isSubmitting ? 'SUBMITTING...' : 'SUBMIT FINAL ESCAPE ANSWER'}
+              {isSubmitting ? 'VERIFYING...' : 'SUBMIT FINAL ESCAPE ANSWER'}
             </button>
           </form>
 
