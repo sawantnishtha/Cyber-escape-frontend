@@ -81,7 +81,7 @@ export const adminService = {
   },
 
   // Full Reset of Competition Event (Supabase + Local Simulator + Anti-cheat strikes)
-  async resetEvent(adminKey = 'ADMIN-CYBER-2026') {
+  async resetEvent(adminKey = 'ADM-2007') {
     // 1. Backend Reset via adminApi (sets session to LANDING, round 1, resets teams & deletes scores)
     await adminApi.resetEvent(adminKey);
 

@@ -30,22 +30,22 @@ export function CodeRevealModal({
 
     // Check if team entered the literal scrambled sequence
     const scrambledSequences = {
-      1: 'RCYB',
-      2: 'HETC',
-      3: 'ETYB',
-      4: 'DOCE'
+      1: 'ONED',
+      2: 'SHAH',
+      3: 'CLKO',
+      4: 'OPTR'
     };
 
     const targetKeywords = {
-      1: 'CYBR',
-      2: 'TECH',
-      3: 'BYTE',
-      4: 'CODE'
+      1: 'NODE',
+      2: 'HASH',
+      3: 'LOCK',
+      4: 'PORT'
     };
 
     if (scrambledSequences[roundNumber] && cleanInput === scrambledSequences[roundNumber]) {
       soundEffects.playAccessDenied();
-      setErrorMsg(`⚠️ '${cleanInput}' is the scrambled sequence! Unscramble the letters to enter the valid English tech keyword (e.g. ${targetKeywords[roundNumber] || 'CODE'}).`);
+      setErrorMsg(`⚠️ '${cleanInput}' is the scrambled sequence! Unscramble the letters to enter the valid English tech keyword (e.g. ${targetKeywords[roundNumber] || 'PORT'}).`);
       return;
     }
 

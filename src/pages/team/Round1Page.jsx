@@ -5,6 +5,7 @@ import { questionService } from '../../services/questionService';
 import { teamService } from '../../services/teamService';
 import { CodeRevealModal } from '../../components/CodeRevealModal';
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { seededShuffle } from '../../utils/shuffleUtils';
 
 export function Round1Page({ team, onRoundComplete }) {
   const [questions, setQuestions] = useState([]);
@@ -29,7 +30,8 @@ export function Round1Page({ team, onRoundComplete }) {
     async function loadData() {
       try {
         const qList = await questionService.getQuestionsForRound(1);
-        setQuestions(qList);
+        const shuffledList = seededShuffle(qList, team?.team_key_hash || team?.id);
+        setQuestions(shuffledList);
 
         if (team?.id) {
           const progress = await teamService.getTeamProgress(team.id, 1);
@@ -54,8 +56,8 @@ export function Round1Page({ team, onRoundComplete }) {
   }, [team?.id]);
 
   function updateCodeLetters(solvedCount) {
-    // 4-letter key 'CYBR' unlocked in scrambled anagram format ['R', 'C', 'Y', 'B']
-    const scrambled = GAME_CONFIG.ROUND_1.SCRAMBLED_LETTERS || ['R', 'C', 'Y', 'B'];
+    // 4-letter key 'NODE' unlocked in scrambled anagram format ['O', 'N', 'E', 'D']
+    const scrambled = GAME_CONFIG.ROUND_1.SCRAMBLED_LETTERS || ['O', 'N', 'E', 'D'];
     const lettersUnlockedCount = Math.min(4, Math.floor(solvedCount / 2));
     setUnlockedCodeLetters(scrambled.slice(0, lettersUnlockedCount));
   }

@@ -15,20 +15,20 @@ export const GAME_CONFIG = {
     SUBTITLE: 'Security Protocol Decryption',
     DESCRIPTION: 'Decode the system. Solve the questions. Unlock the code. Retrieve your hidden word.',
     RULES: [
-      '8 Technical Multiple Choice Questions.',
+      '15 Technical Multiple Choice Questions.',
       'Stage A: 15 seconds to read the question statement before options unlock.',
       'Stage B: 30 seconds to select your answer (2 chances only).',
-      'Every 2 correct questions unlock a segment of the 4-letter code.',
-      'Enter the complete code to reveal Round 1 secret word.'
+      'Solving correct questions unlocks the scrambled 4-letter security key.',
+      'Enter the complete key (NODE) to reveal Round 1 secret word: THINK.'
     ],
-    TOTAL_QUESTIONS: 8,
+    TOTAL_QUESTIONS: 15,
     QUESTION_VIEW_SECONDS: 15,
     OPTION_VIEW_SECONDS: 30,
     TOTAL_TIME_PER_QUESTION: 45,
     MAX_CHANCES: 2,
-    TOTAL_DURATION_SECONDS: 360,
-    EXPECTED_CODE: 'CYBR',
-    SCRAMBLED_LETTERS: ['R', 'C', 'Y', 'B'],
+    TOTAL_DURATION_SECONDS: 675,
+    EXPECTED_CODE: 'NODE',
+    SCRAMBLED_LETTERS: ['O', 'N', 'E', 'D'],
     SECRET_WORD: 'THINK'
   },
 
@@ -39,16 +39,16 @@ export const GAME_CONFIG = {
     SUBTITLE: 'Technical Cryptographic Crosswords',
     DESCRIPTION: 'Solve two technical crosswords to synthesize the system bypass credentials.',
     RULES: [
-      '2 Technical Crosswords: Crossword 1 (Easy) and Crossword 2 (Hard).',
+      '2 Technical Crosswords: Crossword 1 (Easy) and Crossword 2 (Medium).',
       '5 minutes allotted per crossword.',
-      'Crossword 1 completion unlocks the first 2 scrambled letters (H, E).',
-      'Crossword 2 completion unlocks the next 2 scrambled letters (T, C).',
-      'Unscramble the 4 letters and submit the verified key (TECH) to register your round submission.'
+      'Crossword 1 completion unlocks the first 2 scrambled letters (S, H).',
+      'Crossword 2 completion unlocks the next 2 scrambled letters (A, H).',
+      'Unscramble the 4 letters and submit the verified key (HASH) to reveal Round 2 secret word: BEFORE.'
     ],
     TOTAL_CROSSWORDS: 2,
     DURATION_PER_CROSSWORD_SECONDS: 300, // 5 minutes
-    EXPECTED_CODE: 'TECH',
-    SCRAMBLED_LETTERS: ['H', 'E', 'T', 'C'],
+    EXPECTED_CODE: 'HASH',
+    SCRAMBLED_LETTERS: ['S', 'H', 'A', 'H'],
     SECRET_WORD: 'BEFORE'
   },
 
@@ -59,19 +59,19 @@ export const GAME_CONFIG = {
     SUBTITLE: 'ASCII Decryption Matrix',
     DESCRIPTION: 'Direct binary-to-ASCII stream analysis using the permanent system reference matrix.',
     RULES: [
-      '4 Binary-to-ASCII technical decoding challenges (2-3 technical words per stream).',
+      '4 Binary-to-ASCII technical decoding challenges.',
       '60 seconds per question.',
       'Maximum 2 attempts allowed per question.',
-      '1 Hint available per question (Recorded and displayed to Admin).',
-      'Each solved challenge unlocks one letter in a scrambled sequence (E, T, Y, B).',
-      'Unscramble and submit the verified 4-letter key (BYTE) to register your round submission.'
+      'Hints available (Time penalty: -10s per hint).',
+      'Each solved challenge unlocks one letter in a scrambled sequence (C, L, K, O).',
+      'Unscramble and submit the verified 4-letter key (LOCK) to reveal Round 3 secret word: YOU.'
     ],
     TOTAL_QUESTIONS: 4,
     DURATION_SECONDS: 60,
     MAX_ATTEMPTS: 2,
     MAX_HINTS: 1,
-    EXPECTED_CODE: 'BYTE',
-    SCRAMBLED_LETTERS: ['E', 'T', 'Y', 'B'],
+    EXPECTED_CODE: 'LOCK',
+    SCRAMBLED_LETTERS: ['C', 'L', 'K', 'O'],
     SECRET_WORD: 'YOU'
   },
 
@@ -82,18 +82,19 @@ export const GAME_CONFIG = {
     SUBTITLE: 'Tri-Language Logic Reconstruction',
     DESCRIPTION: 'Fill the critical blanks in C++, Python, or Java to execute the kernel bypass.',
     RULES: [
-      '4 Multi-Language Logic Problems (20-30 lines of code, 3 to 4 blanks per problem).',
+      '4 Logic Reconstruction Problems (1 to 3 blanks per problem).',
       'Choose your preferred language (C++, Python, Java) for each problem.',
       '90 seconds per question.',
-      'Hints available (Logged to Admin leaderboard).',
-      'Correct execution unlocks scrambled code characters (D, O, C, E).',
-      'Unscramble the letters and enter the verified key (CODE) to launch the final riddle.'
+      'Maximum 1-2 hints available (Time penalty: -10s per hint).',
+      'Correct execution unlocks scrambled code characters (O, P, T, R).',
+      'Unscramble the letters and enter the verified key (PORT) to reveal Round 4 secret word: ESCAPE.'
     ],
     TOTAL_QUESTIONS: 4,
     DURATION_SECONDS: 90,
     MAX_ATTEMPTS: 3,
-    EXPECTED_CODE: 'CODE',
-    SCRAMBLED_LETTERS: ['D', 'O', 'C', 'E'],
+    MAX_HINTS: 2,
+    EXPECTED_CODE: 'PORT',
+    SCRAMBLED_LETTERS: ['O', 'P', 'T', 'R'],
     SECRET_WORD: 'ESCAPE'
   },
 
@@ -103,8 +104,22 @@ export const GAME_CONFIG = {
     SUBTITLE: 'Decrypted Sentence Assembly & Master Riddle',
     DESCRIPTION: 'Arrange the secret words collected from Rounds 1 through 4 to unlock the master riddle.',
     TARGET_SENTENCE: ['THINK', 'BEFORE', 'YOU', 'ESCAPE'],
-    RIDDLE_TEXT: 'I am written by humans, executed by machines, sometimes broken, always translated. What am I?',
-    EXPECTED_ANSWER: 'CODE',
+    RIDDLES: [
+      {
+        id: 1,
+        question: 'I have no roads, but millions travel through me. I have no buildings, but billions live on me. I connect people without being a phone. What am I?',
+        answer: 'INTERNET',
+        acceptedAnswers: ['INTERNET', 'THE INTERNET']
+      },
+      {
+        id: 2,
+        question: 'I have cities but no houses, forests but no trees, and rivers but no water. What am I?',
+        answer: 'A MAP',
+        acceptedAnswers: ['A MAP', 'MAP', 'THE MAP']
+      }
+    ],
+    RIDDLE_TEXT: 'I have no roads, but millions travel through me. I have no buildings, but billions live on me. I connect people without being a phone. What am I?',
+    EXPECTED_ANSWER: 'INTERNET',
     MAX_ATTEMPTS: 2
   }
 };

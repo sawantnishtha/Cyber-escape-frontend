@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyRound, Shield, Sparkles, HelpCircle } from 'lucide-react';
+import { KeyRound, Shield, HelpCircle } from 'lucide-react';
 import { soundEffects } from '../utils/soundEffects';
 import { authService } from '../services/authService';
 
@@ -18,8 +18,19 @@ export function LandingPage({ onTeamLoginSuccess, onAdminLoginSuccess }) {
     setErrorMsg('');
 
     try {
-      // 1. If key starts with ADMIN, attempt Admin login first
-      if (key.toUpperCase().startsWith('ADMIN')) {
+      const cleanUpperKey = key.toUpperCase();
+      const defaultAdminKey = (
+        (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_DEFAULT_ADMIN_KEY) ||
+        'ADM-2007'
+      ).trim().toUpperCase();
+
+      // 1. If key matches admin key or starts with ADM / ADMIN, attempt Admin login first
+      if (
+        cleanUpperKey === defaultAdminKey ||
+        cleanUpperKey === 'ADM-2007' ||
+        cleanUpperKey.startsWith('ADM-') ||
+        cleanUpperKey.startsWith('ADMIN')
+      ) {
         const adminRes = await authService.loginAdmin(key);
         if (adminRes.success) {
           soundEffects.playAccessGranted();
@@ -29,7 +40,7 @@ export function LandingPage({ onTeamLoginSuccess, onAdminLoginSuccess }) {
         }
       }
 
-      // 2. Attempt Team login
+      // 2. Attempt Team login (e.g. CYB-001)
       const teamRes = await authService.loginTeam(key);
       if (teamRes.success) {
         soundEffects.playAccessGranted();
@@ -38,7 +49,7 @@ export function LandingPage({ onTeamLoginSuccess, onAdminLoginSuccess }) {
         return;
       }
 
-      // 3. Fallback check for Admin key (in case admin key without ADMIN prefix is used)
+      // 3. Fallback check for Admin key
       const fallbackAdminRes = await authService.loginAdmin(key);
       if (fallbackAdminRes.success) {
         soundEffects.playAccessGranted();
@@ -66,9 +77,11 @@ export function LandingPage({ onTeamLoginSuccess, onAdminLoginSuccess }) {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        minHeight: 'calc(100vh - 68px)',
+        minHeight: '100vh',
+        height: '100vh',
         padding: '2rem 1.5rem',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        boxSizing: 'border-box'
       }}
     >
       {/* Background Video / Asset */}
@@ -96,72 +109,41 @@ export function LandingPage({ onTeamLoginSuccess, onAdminLoginSuccess }) {
       <div className="cyber-bg" />
       <div className="cyber-bg-radial" />
 
-      {/* Hero Content Container */}
+      {/* Hero Content Container - Only CYBER ESCAPE and START GAME */}
       <div
         style={{
           position: 'relative',
           zIndex: 1,
           textAlign: 'center',
-          maxWidth: '850px',
-          margin: '0 auto'
+          maxWidth: '1000px',
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center'
         }}
       >
-        {/* Organizer Badge */}
-        <div
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.6rem',
-            padding: '0.4rem 1.1rem',
-            borderRadius: '20px',
-            background: 'rgba(0, 243, 255, 0.08)',
-            border: '1px solid rgba(0, 243, 255, 0.3)',
-            color: 'var(--neon-cyan)',
-            fontSize: '0.85rem',
-            fontWeight: '600',
-            letterSpacing: '1.5px',
-            textTransform: 'uppercase',
-            marginBottom: '1.5rem',
-            boxShadow: '0 0 15px var(--neon-cyan-glow)'
-          }}
-        >
-          <Sparkles size={16} />
-          Presented by CESA — Department of Computer Engineering
-        </div>
-
-        {/* Main CYBER ESCAPE Display Heading using Timetravel font */}
+        {/* Main CYBER ESCAPE Display Heading - Larger & Glowing */}
         <h1
           className="glow-cyan font-display"
           style={{
-            fontSize: 'clamp(2.8rem, 7vw, 5.2rem)',
+            fontSize: 'clamp(4rem, 10vw, 7.2rem)',
             fontWeight: '900',
-            letterSpacing: '6px',
-            lineHeight: 1.1,
-            marginBottom: '1.2rem',
-            filter: 'drop-shadow(0 0 25px rgba(0, 243, 255, 0.45))'
+            letterSpacing: '8px',
+            lineHeight: 1.05,
+            marginBottom: '3rem',
+            filter: 'drop-shadow(0 0 35px rgba(0, 243, 255, 0.55))',
+            textShadow: '0 0 30px var(--neon-cyan-glow)'
           }}
         >
           CYBER ESCAPE
         </h1>
 
-        <p
-          style={{
-            fontSize: 'clamp(1rem, 2vw, 1.25rem)',
-            color: 'var(--text-muted)',
-            maxWidth: '650px',
-            margin: '0 auto 2.8rem auto',
-            lineHeight: 1.6
-          }}
-        >
-          A high-stakes 4-layer technical escape competition. Decode algorithms, navigate security grids, decrypt binary data streams, and reconstruct kernel logic to unlock the final riddle.
-        </p>
-
         {/* Single Action Button: START GAME ONLY */}
         <div
           style={{
             display: 'flex',
-            justifyContent: 'center',
-            marginBottom: '3rem'
+            justifyContent: 'center'
           }}
         >
           <button
@@ -172,56 +154,18 @@ export function LandingPage({ onTeamLoginSuccess, onAdminLoginSuccess }) {
             }}
             className="cyber-btn cyber-btn-primary"
             style={{
-              padding: '1rem 3rem',
-              fontSize: '1.15rem',
-              letterSpacing: '2px',
-              boxShadow: '0 0 25px var(--neon-cyan-glow)'
+              padding: '1.15rem 3.6rem',
+              fontSize: '1.25rem',
+              letterSpacing: '2.5px',
+              boxShadow: '0 0 30px var(--neon-cyan-glow)',
+              borderRadius: '6px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.8rem'
             }}
           >
-            <KeyRound size={22} /> START GAME
+            <KeyRound size={24} /> START GAME
           </button>
-        </div>
-
-        {/* Technical Competition Quick Rules Cards */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-            gap: '1rem',
-            textAlign: 'left'
-          }}
-        >
-          <div className="cyber-card" style={{ padding: '1.2rem' }}>
-            <div style={{ color: 'var(--neon-cyan)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', marginBottom: '0.3rem' }}>
-              ROUND 01
-            </div>
-            <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.3rem' }}>THE FIRST BREACH</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>8 MCQs // 30s View + 30s Options</div>
-          </div>
-
-          <div className="cyber-card" style={{ padding: '1.2rem' }}>
-            <div style={{ color: 'var(--neon-cyan)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', marginBottom: '0.3rem' }}>
-              ROUND 02
-            </div>
-            <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.3rem' }}>GRIDLOCK PROTOCOL</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>2 Technical Crosswords // 5 Mins</div>
-          </div>
-
-          <div className="cyber-card" style={{ padding: '1.2rem' }}>
-            <div style={{ color: 'var(--neon-cyan)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', marginBottom: '0.3rem' }}>
-              ROUND 03
-            </div>
-            <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.3rem' }}>BINARY CONVERGENCE</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>4 Binary Challenges // ASCII Matrix</div>
-          </div>
-
-          <div className="cyber-card" style={{ padding: '1.2rem' }}>
-            <div style={{ color: 'var(--neon-cyan)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', marginBottom: '0.3rem' }}>
-              ROUND 04
-            </div>
-            <div style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.3rem' }}>SYSTEM OVERRIDE</div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>C++ / Python / Java Code Fill</div>
-          </div>
         </div>
       </div>
 
@@ -245,27 +189,12 @@ export function LandingPage({ onTeamLoginSuccess, onAdminLoginSuccess }) {
                 <input
                   type="text"
                   className="cyber-input"
-                  placeholder="e.g. CE-DEMO-001 or ACCESS KEY"
+                  placeholder="ENTER ACCESS KEY (e.g. CYB-001)"
                   value={accessKey}
                   onChange={(e) => setAccessKey(e.target.value)}
                   style={{ letterSpacing: '2px', textTransform: 'uppercase', textAlign: 'center', fontSize: '1.1rem' }}
                   autoFocus
                 />
-              </div>
-
-              {/* Demo Hint Helper */}
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  fontSize: '0.75rem',
-                  color: 'var(--text-dim)',
-                  marginBottom: '1.2rem',
-                  fontFamily: 'var(--font-mono)'
-                }}
-              >
-                <HelpCircle size={14} /> Team Keys: CE-DEMO-001 to 015 | Admin Key: ADMIN-CYBER-2026
               </div>
 
               {errorMsg && (

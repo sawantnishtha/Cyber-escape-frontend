@@ -65,8 +65,8 @@ export function Round2Page({ team, onRoundComplete }) {
   }, [team?.id]);
 
   function updateCodeLetters(solvedSet) {
-    // 4-letter key 'TECH' unlocked in scrambled anagram format ['H', 'E', 'T', 'C']
-    const scrambled = GAME_CONFIG.ROUND_2.SCRAMBLED_LETTERS || ['H', 'E', 'T', 'C'];
+    // 4-letter key 'HASH' unlocked in scrambled anagram format ['S', 'H', 'A', 'H']
+    const scrambled = GAME_CONFIG.ROUND_2.SCRAMBLED_LETTERS || ['S', 'H', 'A', 'H'];
     const letters = [];
     if (solvedSet.has(1)) {
       letters.push(scrambled[0], scrambled[1]);

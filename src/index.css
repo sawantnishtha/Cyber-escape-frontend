@@ -194,19 +194,21 @@ h1, h2, h3, .cyber-title {
   border-right: 2px solid var(--neon-cyan);
 }
 
-/* Clean Header Navbar */
+/* Clean Header Navbar - Seamlessly merged into background */
 .cyber-header {
-  height: 68px;
-  border-bottom: 1px solid var(--border-subtle);
-  background: rgba(6, 9, 19, 0.85);
-  backdrop-filter: blur(12px);
+  height: 56px;
+  min-height: 56px;
+  max-height: 56px;
+  border-bottom: none;
+  background: transparent;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 2rem;
+  justify-content: flex-end;
+  padding: 0 1.8rem;
   position: sticky;
   top: 0;
   z-index: 100;
+  box-sizing: border-box;
 }
 
 .cyber-header-brand {

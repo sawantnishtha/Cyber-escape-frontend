@@ -6,6 +6,7 @@ import { teamService } from '../../services/teamService';
 import { CodeRevealModal } from '../../components/CodeRevealModal';
 import { DEMO_ROUND_4_QUESTIONS } from '../../constants/demoData';
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { seededShuffle } from '../../utils/shuffleUtils';
 
 export function Round4Page({ team, onRoundComplete }) {
   const [questions, setQuestions] = useState([]);
@@ -15,7 +16,8 @@ export function Round4Page({ team, onRoundComplete }) {
   const [blankValues, setBlankValues] = useState({}); // { 0: 'a', 1: 'sum' }
   const [solvedQuestions, setSolvedQuestions] = useState(new Set());
   const [hintText, setHintText] = useState(null);
-  const [hintUsedThisQ, setHintUsedThisQ] = useState(false);
+  const [unlockedHintCount, setUnlockedHintCount] = useState(0); // 0, 1, or 2
+  const [activeHintIndex, setActiveHintIndex] = useState(0); // 0 or 1
   const [executionFeedback, setExecutionFeedback] = useState(null); // 'correct' | 'wrong'
   const [unlockedCodeLetters, setUnlockedCodeLetters] = useState([]);
   const [showCodeModal, setShowCodeModal] = useState(false);
@@ -27,7 +29,8 @@ export function Round4Page({ team, onRoundComplete }) {
     async function loadData() {
       try {
         const qList = await questionService.getQuestionsForRound(4);
-        setQuestions(qList);
+        const shuffledList = seededShuffle(qList, team?.team_key_hash || team?.id);
+        setQuestions(shuffledList);
 
         if (team?.id) {
           const progress = await teamService.getTeamProgress(team.id, 4);
@@ -52,14 +55,10 @@ export function Round4Page({ team, onRoundComplete }) {
   }, [team?.id]);
 
   function updateCodeLetters(solvedSet) {
-    // 4-letter key 'CODE' unlocked in scrambled anagram format ['D', 'O', 'C', 'E']
-    const scrambled = GAME_CONFIG.ROUND_4.SCRAMBLED_LETTERS || ['D', 'O', 'C', 'E'];
-    const letters = [];
-    if (solvedSet.has(1)) letters.push(scrambled[0]);
-    if (solvedSet.has(2)) letters.push(scrambled[1]);
-    if (solvedSet.has(3)) letters.push(scrambled[2]);
-    if (solvedSet.has(4)) letters.push(scrambled[3]);
-    setUnlockedCodeLetters(letters);
+    // 4-letter key 'PORT' unlocked in scrambled anagram format ['O', 'P', 'T', 'R']
+    const scrambled = GAME_CONFIG.ROUND_4.SCRAMBLED_LETTERS || ['O', 'P', 'T', 'R'];
+    const count = Math.min(4, solvedSet.size);
+    setUnlockedCodeLetters(scrambled.slice(0, count));
   }
 
   // 90s question timer
@@ -128,19 +127,41 @@ export function Round4Page({ team, onRoundComplete }) {
   };
 
   const handleRequestHint = async () => {
-    if (hintUsedThisQ) return;
     soundEffects.playClick();
+    // Time penalty on requesting hint
+    setTimerSeconds((prev) => Math.max(5, prev - 10));
 
     const currentQ = questions[currentIndex];
-    try {
-      const res = await questionService.requestHint(team.id, 4, currentQ.question_number);
-      if (res && res.hint) {
-        setHintText(res.hint);
-        setHintUsedThisQ(true);
+
+    // Fetch hint from backend if not already retrieved
+    let activeHint = hintText;
+    if (!activeHint) {
+      try {
+        const res = await questionService.requestHint(team?.id, 4, currentQ.question_number);
+        if (res && res.hint) {
+          activeHint = res.hint;
+          setHintText(res.hint);
+        } else if (currentQ.hint_data) {
+          activeHint = currentQ.hint_data;
+          setHintText(currentQ.hint_data);
+        }
+      } catch (err) {
+        if (currentQ.hint_data) {
+          activeHint = currentQ.hint_data;
+          setHintText(currentQ.hint_data);
+        }
       }
-    } catch (err) {
-      console.error('Error requesting hint:', err);
     }
+
+    const raw = activeHint || currentQ.hint_data || '';
+    const steps = raw.split(/;\s*|\n/).map((s) => s.trim()).filter(Boolean).slice(0, 2);
+    const totalSteps = Math.min(2, steps.length > 0 ? steps.length : 2);
+
+    setUnlockedHintCount((prev) => {
+      const nextCount = Math.min(totalSteps, prev + 1);
+      setActiveHintIndex(nextCount - 1); // Set the newly unlocked hint as the currently viewed hint
+      return nextCount;
+    });
   };
 
   const handleNextQuestion = () => {
@@ -151,7 +172,8 @@ export function Round4Page({ team, onRoundComplete }) {
       setBlankValues({});
       setExecutionFeedback(null);
       setHintText(null);
-      setHintUsedThisQ(false);
+      setUnlockedHintCount(0);
+      setActiveHintIndex(0);
     }
   };
 
@@ -170,6 +192,10 @@ export function Round4Page({ team, onRoundComplete }) {
   const snippet = currentQ.question_data.snippets[selectedLang] || '';
   const blanksCount = currentQ.question_data.blanksCount || 2;
   const labels = currentQ.question_data.labels || [];
+  const currentHintData = hintText || currentQ.hint_data || '';
+  const hintSteps = currentHintData
+    ? currentHintData.split(/;\s*/).map((s) => s.trim()).filter(Boolean)
+    : [];
 
   return (
     <div
@@ -266,7 +292,7 @@ export function Round4Page({ team, onRoundComplete }) {
         }}
       >
         <div>
-          {/* Header */}
+          {/* Header with normal readable font */}
           <div
             style={{
               display: 'flex',
@@ -281,44 +307,180 @@ export function Round4Page({ team, onRoundComplete }) {
               <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--neon-cyan)', fontSize: '0.85rem' }}>
                 PROBLEM 0{currentQ.question_number} // {currentQ.difficulty.toUpperCase()}
               </span>
-              <h2 style={{ fontSize: '1.15rem', color: '#fff', marginTop: '0.2rem' }}>
+              <h2
+                style={{
+                  fontSize: '1.25rem',
+                  fontWeight: '600',
+                  color: '#f0f6fc',
+                  marginTop: '0.35rem',
+                  fontFamily: 'var(--font-body)',
+                  textTransform: 'none',
+                  letterSpacing: '0.3px',
+                  lineHeight: '1.5'
+                }}
+              >
                 {currentQ.question_data.title}
               </h2>
             </div>
 
-            {!hintUsedThisQ ? (
+            {/* Step-by-step Progressive Hint Trigger */}
+            {unlockedHintCount < 2 ? (
               <button
+                type="button"
                 onClick={handleRequestHint}
                 className="cyber-btn"
-                style={{ padding: '0.35rem 0.8rem', fontSize: '0.75rem', borderColor: 'var(--neon-amber)', color: 'var(--neon-amber)' }}
+                style={{
+                  padding: '0.4rem 0.95rem',
+                  fontSize: '0.78rem',
+                  borderColor: 'var(--neon-amber)',
+                  color: 'var(--neon-amber)',
+                  background: 'rgba(255, 183, 0, 0.08)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.45rem',
+                  fontWeight: '700',
+                  fontFamily: 'var(--font-mono)'
+                }}
               >
-                <HelpCircle size={14} /> REQUEST HINT
+                <HelpCircle size={14} />
+                {unlockedHintCount === 0
+                  ? 'REQUEST HINT (1/2) (-10s PENALTY)'
+                  : `NEXT HINT (${unlockedHintCount + 1}/2) (-10s PENALTY)`}
               </button>
             ) : (
-              <span style={{ fontSize: '0.75rem', color: 'var(--neon-amber)', fontFamily: 'var(--font-mono)' }}>
-                * HINT RECORDED *
-              </span>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.4rem',
+                  padding: '0.35rem 0.8rem',
+                  background: 'rgba(255, 183, 0, 0.1)',
+                  border: '1px solid rgba(255, 183, 0, 0.4)',
+                  borderRadius: '4px',
+                  fontSize: '0.78rem',
+                  color: 'var(--neon-amber)',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: '700',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                <span>HINTS USED: 2/2</span>
+              </div>
             )}
           </div>
 
-          {hintText && (
+          {/* Progressive Hint Reveal Display - Exactly 1 hint displayed at a time */}
+          {unlockedHintCount > 0 && hintSteps.length > 0 && (
             <div
               style={{
-                padding: '0.7rem 1rem',
-                borderRadius: '6px',
-                background: 'rgba(255, 183, 0, 0.08)',
-                border: '1px solid rgba(255, 183, 0, 0.3)',
+                padding: '0.9rem 1.25rem',
+                borderRadius: '8px',
+                background: 'rgba(255, 183, 0, 0.07)',
+                border: '1px solid rgba(255, 183, 0, 0.35)',
                 color: 'var(--neon-amber)',
-                fontSize: '0.85rem',
-                marginBottom: '1.2rem',
-                fontFamily: 'var(--font-mono)'
+                fontSize: '0.88rem',
+                fontFamily: 'var(--font-mono)',
+                marginBottom: '1.3rem',
+                boxShadow: '0 0 15px rgba(255, 183, 0, 0.1)'
               }}
             >
-              <strong>DEBUG HINT:</strong> {hintText}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  marginBottom: '0.5rem',
+                  borderBottom: '1px solid rgba(255, 183, 0, 0.2)',
+                  paddingBottom: '0.35rem'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span
+                    style={{
+                      background: 'var(--neon-amber)',
+                      color: '#000',
+                      fontWeight: '800',
+                      fontSize: '0.78rem',
+                      padding: '0.15rem 0.55rem',
+                      borderRadius: '4px',
+                      letterSpacing: '1px'
+                    }}
+                  >
+                    {activeHintIndex + 1}/2
+                  </span>
+                  <span style={{ fontWeight: '700', fontSize: '0.82rem', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                    DEBUG HINT {activeHintIndex + 1}/2
+                  </span>
+                </div>
+
+                {/* If multiple hints unlocked, tabs allow viewing 1/2, 2/2 */}
+                {unlockedHintCount > 1 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-dim)' }}>VIEW:</span>
+                    {hintSteps.slice(0, unlockedHintCount).map((_, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => setActiveHintIndex(idx)}
+                        style={{
+                          background: activeHintIndex === idx ? 'var(--neon-amber)' : 'rgba(255, 183, 0, 0.12)',
+                          color: activeHintIndex === idx ? '#000' : 'var(--neon-amber)',
+                          border: `1px solid ${activeHintIndex === idx ? 'var(--neon-amber)' : 'rgba(255, 183, 0, 0.3)'}`,
+                          borderRadius: '4px',
+                          padding: '0.15rem 0.45rem',
+                          fontSize: '0.72rem',
+                          fontFamily: 'var(--font-mono)',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        {idx + 1}/2
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Only ONE single hint displayed on screen */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '0.65rem',
+                  lineHeight: '1.6',
+                  color: '#fff7ed',
+                  fontSize: '0.92rem',
+                  padding: '0.2rem 0'
+                }}
+              >
+                <span
+                  style={{
+                    background: 'rgba(255, 183, 0, 0.2)',
+                    padding: '0.1rem 0.45rem',
+                    borderRadius: '4px',
+                    fontSize: '0.75rem',
+                    fontWeight: '700',
+                    color: 'var(--neon-amber)',
+                    fontFamily: 'var(--font-mono)'
+                  }}
+                >
+                  {activeHintIndex + 1}/2
+                </span>
+                <span>{hintSteps[activeHintIndex]}</span>
+              </div>
             </div>
           )}
 
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', marginBottom: '1.2rem' }}>
+          <p
+            style={{
+              color: 'var(--text-muted)',
+              fontSize: '0.94rem',
+              lineHeight: '1.6',
+              marginBottom: '1.2rem',
+              fontFamily: 'var(--font-body)'
+            }}
+          >
             {currentQ.question_data.description}
           </p>
 

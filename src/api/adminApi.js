@@ -100,7 +100,7 @@ export const adminApi = {
   /**
    * Full Event Reset via atomic RPC or multi-table rollback
    */
-  async resetEvent(adminKey = 'ADMIN-CYBER-2026') {
+  async resetEvent(adminKey = 'ADM-2007') {
     if (!apiClient.isConfigured()) {
       return { success: false, fallback: true };
     }

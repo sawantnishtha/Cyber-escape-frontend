@@ -27,7 +27,7 @@ export function App() {
   }, []);
 
   const handleResetDemo = async () => {
-    await adminService.resetEvent('ADMIN-CYBER-2026');
+    await adminService.resetEvent('ADM-2007');
     refreshGameState();
   };
 

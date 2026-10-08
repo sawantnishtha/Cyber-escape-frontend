@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShieldAlert, AlertTriangle, Lock, XOctagon, RotateCcw, LogOut } from 'lucide-react';
+import { ShieldAlert, AlertTriangle, Lock, XOctagon, RotateCcw, LogOut, Maximize2 } from 'lucide-react';
 import { soundEffects } from '../utils/soundEffects';
 import { adminService } from '../services/adminService';
 import { authService } from '../services/authService';
@@ -8,6 +8,17 @@ import { supabase, isSupabaseConfigured } from '../config/supabase';
 const MAX_WARNINGS = 2; // 2 warnings are valid, on 3rd infraction team is disqualified!
 
 export function ProctoringGuard({ team, children, isActive = true }) {
+  const checkFullscreen = () => {
+    if (typeof document === 'undefined') return true;
+    return Boolean(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement ||
+      document.msFullscreenElement
+    );
+  };
+
+  const [isFullscreen, setIsFullscreen] = useState(checkFullscreen);
   const [strikes, setStrikes] = useState(() => {
     if (!team?.id) return 0;
     const saved = localStorage.getItem(`cyber_escape_strikes_${team.id}`);
@@ -103,7 +114,27 @@ export function ProctoringGuard({ team, children, isActive = true }) {
     }
   };
 
-  // Window Event Listeners for Tab Switching
+  // Fullscreen Request Handler
+  const enterFullscreen = async () => {
+    soundEffects.playClick();
+    try {
+      const el = document.documentElement;
+      if (el.requestFullscreen) {
+        await el.requestFullscreen();
+      } else if (el.webkitRequestFullscreen) {
+        await el.webkitRequestFullscreen();
+      } else if (el.mozRequestFullScreen) {
+        await el.mozRequestFullScreen();
+      } else if (el.msRequestFullscreen) {
+        await el.msRequestFullscreen();
+      }
+      setIsFullscreen(true);
+    } catch (err) {
+      console.warn('Fullscreen request blocked or dismissed by user:', err);
+    }
+  };
+
+  // Window Event Listeners for Tab Switching & Fullscreen Enforcement
   useEffect(() => {
     if (!isActive || !team?.id || isDisqualified) return;
 
@@ -119,19 +150,73 @@ export function ProctoringGuard({ team, children, isActive = true }) {
       }
     };
 
+    const handleFullscreenChange = () => {
+      const fs = checkFullscreen();
+      setIsFullscreen(fs);
+      if (!fs && !isDisqualified) {
+        recordStrike('FULLSCREEN_EXIT (EXITED FULL SCREEN CONTEST ENVIRONMENT)');
+      }
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      return false;
+    };
+
+    const handleKeyDown = (e) => {
+      // Prevent F12 (DevTools)
+      if (e.key === 'F12') {
+        e.preventDefault();
+        recordStrike('DEVTOOLS_SHORTCUT (F12 ATTEMPTED)');
+        return false;
+      }
+      // Prevent Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C (Inspect Element)
+      if (e.ctrlKey && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+        e.preventDefault();
+        recordStrike('DEVTOOLS_SHORTCUT (INSPECT ELEMENT ATTEMPTED)');
+        return false;
+      }
+      // Prevent Ctrl+U (View Source)
+      if (e.ctrlKey && ['U', 'u'].includes(e.key)) {
+        e.preventDefault();
+        recordStrike('VIEW_SOURCE_SHORTCUT (CTRL+U ATTEMPTED)');
+        return false;
+      }
+      // Prevent F11 manual fullscreen toggle
+      if (e.key === 'F11') {
+        e.preventDefault();
+        return false;
+      }
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleWindowBlur);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+    document.addEventListener('contextmenu', handleContextMenu);
+    window.addEventListener('keydown', handleKeyDown);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('blur', handleWindowBlur);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+      document.removeEventListener('contextmenu', handleContextMenu);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isActive, team?.id, strikes, isDisqualified]);
 
   // Helper to acknowledge warning and resume
-  const handleAcknowledgeWarning = () => {
+  const handleAcknowledgeWarning = async () => {
     setActiveWarning(null);
     soundEffects.playClick();
+    if (!checkFullscreen()) {
+      await enterFullscreen();
+    }
   };
 
   // Handler to clear strikes and restore team for testing
@@ -389,6 +474,106 @@ export function ProctoringGuard({ team, children, isActive = true }) {
               style={{ width: '100%', padding: '0.85rem', fontSize: '1rem', justifyContent: 'center' }}
             >
               <ShieldAlert size={18} /> ACKNOWLEDGE WARNING & RESUME
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Full Screen Mandatory Overlay */}
+      {isActive && !isFullscreen && !isDisqualified && !activeWarning && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 99997,
+            background: 'rgba(3, 7, 18, 0.96)',
+            backdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1.5rem',
+            textAlign: 'center'
+          }}
+        >
+          <div
+            className="cyber-modal-content"
+            style={{
+              maxWidth: '560px',
+              border: '2px solid var(--neon-cyan)',
+              boxShadow: '0 0 35px var(--neon-cyan-glow)',
+              padding: '2.5rem',
+              textAlign: 'center',
+              animation: 'fadeIn 0.3s ease'
+            }}
+          >
+            <div
+              style={{
+                width: '74px',
+                height: '74px',
+                borderRadius: '50%',
+                background: 'rgba(0, 243, 255, 0.12)',
+                border: '2px solid var(--neon-cyan)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginBottom: '1.2rem',
+                boxShadow: '0 0 20px var(--neon-cyan-glow)'
+              }}
+            >
+              <Maximize2 size={40} color="var(--neon-cyan)" />
+            </div>
+
+            <div
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.8rem',
+                letterSpacing: '2px',
+                color: 'var(--neon-cyan)',
+                marginBottom: '0.4rem',
+                textTransform: 'uppercase'
+              }}
+            >
+              CONTEST INTEGRITY // MANDATORY FULL SCREEN
+            </div>
+
+            <h2 className="glow-cyan font-display" style={{ fontSize: '1.8rem', color: '#fff', marginBottom: '1rem' }}>
+              FULL SCREEN REQUIRED
+            </h2>
+
+            <div
+              style={{
+                background: 'rgba(10, 16, 32, 0.8)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '6px',
+                padding: '1.2rem',
+                marginBottom: '1.6rem',
+                textAlign: 'left',
+                fontSize: '0.88rem',
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--text-muted)',
+                lineHeight: '1.6'
+              }}
+            >
+              <p style={{ margin: '0 0 0.5rem 0' }}>
+                • <strong style={{ color: '#fff' }}>All competition rounds</strong> must be executed in Full Screen mode.
+              </p>
+              <p style={{ margin: '0 0 0.5rem 0' }}>
+                • Exiting Full Screen, pressing <strong style={{ color: 'var(--neon-amber)' }}>ESC</strong>, or switching windows will automatically trigger <strong style={{ color: 'var(--neon-red)' }}>Security Strikes</strong>.
+              </p>
+              <p style={{ margin: 0 }}>
+                • On 3 strikes, your team will be <strong style={{ color: 'var(--neon-red)' }}>permanently disqualified</strong>.
+              </p>
+            </div>
+
+            <button
+              onClick={enterFullscreen}
+              className="cyber-btn cyber-btn-primary"
+              style={{ width: '100%', padding: '0.9rem', fontSize: '1.05rem', justifyContent: 'center' }}
+            >
+              <Maximize2 size={18} /> ENTER FULL SCREEN & RESUME
             </button>
           </div>
         </div>

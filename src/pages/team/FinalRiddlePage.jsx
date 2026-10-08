@@ -4,8 +4,14 @@ import { soundEffects } from '../../utils/soundEffects';
 import { teamService } from '../../services/teamService';
 import { codeService } from '../../services/codeService';
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { getTeamRiddleIndex } from '../../utils/shuffleUtils';
 
 export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
+  const riddleIndex = getTeamRiddleIndex(team?.team_key_hash || team?.id || '');
+  const assignedRiddle =
+    (GAME_CONFIG.FINAL_CHALLENGE.RIDDLES && GAME_CONFIG.FINAL_CHALLENGE.RIDDLES[riddleIndex]) ||
+    { riddle: GAME_CONFIG.FINAL_CHALLENGE.RIDDLE_TEXT, answers: ['INTERNET', 'A MAP'] };
+
   const [collectedWords, setCollectedWords] = useState(['THINK', 'BEFORE', 'YOU', 'ESCAPE']);
   const [arrangedWords, setArrangedWords] = useState(['ESCAPE', 'YOU', 'BEFORE', 'THINK']); // Initially scrambled
   const [draggedIndex, setDraggedIndex] = useState(null);
@@ -100,9 +106,14 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
     setIsSubmitting(true);
     soundEffects.playClick();
 
+    const normalized = finalAnswer.trim().toUpperCase();
+    const localMatch = assignedRiddle.answers.some(
+      (a) => a.toUpperCase() === normalized || normalized.includes(a.toUpperCase())
+    );
+
     try {
       const res = await codeService.submitFinalAnswer(team.id, finalAnswer.trim());
-      if (res && res.is_correct) {
+      if ((res && res.is_correct) || localMatch) {
         soundEffects.playAccessGranted();
         setFeedback('correct');
         setTimeout(() => {
@@ -115,6 +126,13 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
       }
     } catch (err) {
       console.error('Final answer submission error:', err);
+      if (localMatch) {
+        soundEffects.playAccessGranted();
+        setFeedback('correct');
+        setTimeout(() => {
+          onFinalAnswerAccepted();
+        }, 1200);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -307,18 +325,19 @@ export function FinalRiddlePage({ team, onFinalAnswerAccepted }) {
 
           <h2
             style={{
-              fontSize: '1.4rem',
+              fontSize: '1.25rem',
               fontWeight: '600',
               color: '#fff',
-              lineHeight: 1.6,
+              lineHeight: 1.7,
               marginBottom: '2rem',
               maxWidth: '650px',
               margin: '0 auto 2rem auto',
               textTransform: 'none',
-              letterSpacing: 'normal'
+              letterSpacing: 'normal',
+              whiteSpace: 'pre-line'
             }}
           >
-            "{GAME_CONFIG.FINAL_CHALLENGE.RIDDLE_TEXT}"
+            {assignedRiddle.riddle}
           </h2>
 
           {/* Form */}

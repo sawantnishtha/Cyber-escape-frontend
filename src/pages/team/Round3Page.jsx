@@ -6,6 +6,7 @@ import { teamService } from '../../services/teamService';
 import { CodeRevealModal } from '../../components/CodeRevealModal';
 import { ASCII_REFERENCE_TABLE, DEMO_ROUND_3_QUESTIONS } from '../../constants/demoData';
 import { GAME_CONFIG } from '../../constants/gameConfig';
+import { seededShuffle } from '../../utils/shuffleUtils';
 
 export function Round3Page({ team, onRoundComplete }) {
   const [questions, setQuestions] = useState([]);
@@ -27,7 +28,8 @@ export function Round3Page({ team, onRoundComplete }) {
     async function loadData() {
       try {
         const qList = await questionService.getQuestionsForRound(3);
-        setQuestions(qList);
+        const shuffledList = seededShuffle(qList, team?.team_key_hash || team?.id);
+        setQuestions(shuffledList);
 
         if (team?.id) {
           const progress = await teamService.getTeamProgress(team.id, 3);
@@ -52,14 +54,10 @@ export function Round3Page({ team, onRoundComplete }) {
   }, [team?.id]);
 
   function updateCodeLetters(solvedSet) {
-    // 4-letter key 'BYTE' unlocked in scrambled anagram format ['E', 'T', 'Y', 'B']
-    const scrambled = GAME_CONFIG.ROUND_3.SCRAMBLED_LETTERS || ['E', 'T', 'Y', 'B'];
-    const letters = [];
-    if (solvedSet.has(1)) letters.push(scrambled[0]);
-    if (solvedSet.has(2)) letters.push(scrambled[1]);
-    if (solvedSet.has(3)) letters.push(scrambled[2]);
-    if (solvedSet.has(4)) letters.push(scrambled[3]);
-    setUnlockedCodeLetters(letters);
+    // 4-letter key 'LOCK' unlocked in scrambled anagram format ['C', 'L', 'K', 'O']
+    const scrambled = GAME_CONFIG.ROUND_3.SCRAMBLED_LETTERS || ['C', 'L', 'K', 'O'];
+    const count = Math.min(4, solvedSet.size);
+    setUnlockedCodeLetters(scrambled.slice(0, count));
   }
 
   // Question countdown timer
@@ -122,9 +120,12 @@ export function Round3Page({ team, onRoundComplete }) {
     if (hintUsedThisQ) return;
     soundEffects.playClick();
 
+    // Time penalty: deduct 10s for requesting hint
+    setTimerSeconds((prev) => Math.max(5, prev - 10));
+
     const currentQ = questions[currentIndex];
     try {
-      const res = await questionService.requestHint(team.id, 3, currentQ.question_number);
+      const res = await questionService.requestHint(team?.id, 3, currentQ.question_number);
       if (res && res.hint) {
         setHintText(res.hint);
         setHintUsedThisQ(true);
@@ -318,7 +319,7 @@ export function Round3Page({ team, onRoundComplete }) {
                 className="cyber-btn"
                 style={{ padding: '0.35rem 0.8rem', fontSize: '0.75rem', borderColor: 'var(--neon-amber)', color: 'var(--neon-amber)' }}
               >
-                <HelpCircle size={14} /> REQUEST HINT (1 AVAILABLE)
+                <HelpCircle size={14} /> REQUEST HINT (-10s PENALTY)
               </button>
             ) : (
               <span style={{ fontSize: '0.75rem', color: 'var(--neon-amber)', fontFamily: 'var(--font-mono)' }}>

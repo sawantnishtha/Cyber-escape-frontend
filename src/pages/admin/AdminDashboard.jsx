@@ -62,6 +62,10 @@ export function AdminDashboard({ admin, gameSession, onResetDemo }) {
 
   const currentState = gameSession?.current_state || GAME_STATES.LANDING;
   const currentRound = gameSession?.current_round || 1;
+  const activeAdminKey =
+    admin?.admin_key ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEFAULT_ADMIN_KEY) ||
+    'ADM-2007';
 
   // Search query for team monitor
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
@@ -137,7 +141,7 @@ export function AdminDashboard({ admin, gameSession, onResetDemo }) {
             await adminService.updateAllTeamsStatus('active', targetRound);
           }
 
-          await adminService.setGameState('ADMIN-CYBER-2026', targetState, targetRound);
+          await adminService.setGameState(activeAdminKey, targetState, targetRound);
           soundEffects.playAccessGranted();
           showConsoleNotice(`BROADCAST DISPATCHED: ${actionLabel.toUpperCase()} (${targetState})`);
           fetchData();
@@ -217,9 +221,9 @@ export function AdminDashboard({ admin, gameSession, onResetDemo }) {
         setIsProcessing(true);
         try {
           // 1. Confirm selections in database and simulator
-          await adminService.confirmRoundSelections('ADMIN-CYBER-2026', roundNumber, selectedIds);
+          await adminService.confirmRoundSelections(activeAdminKey, roundNumber, selectedIds);
           // 2. Publish qualified roster
-          await adminService.publishRoundSelections('ADMIN-CYBER-2026', roundNumber, selectedIds);
+          await adminService.publishRoundSelections(activeAdminKey, roundNumber, selectedIds);
 
           // 3. Set game state to the corresponding RESULT state
           let resultState = GAME_STATES.R1_RESULT;
@@ -228,7 +232,7 @@ export function AdminDashboard({ admin, gameSession, onResetDemo }) {
           else if (roundNumber === 3) resultState = GAME_STATES.R3_RESULT;
           else if (roundNumber === 4) resultState = GAME_STATES.R4_RESULT;
 
-          await adminService.setGameState('ADMIN-CYBER-2026', resultState, roundNumber);
+          await adminService.setGameState(activeAdminKey, resultState, roundNumber);
 
           setPublishedRoundsMap((prev) => ({ ...prev, [roundNumber]: true }));
           soundEffects.playAccessGranted();
@@ -266,7 +270,7 @@ export function AdminDashboard({ admin, gameSession, onResetDemo }) {
       onConfirm: async () => {
         setIsProcessing(true);
         try {
-          await adminService.declareFinalWinners('ADMIN-CYBER-2026', selectedWinnerId, selectedRunnerUpId, winner?.team_name, runnerUp?.team_name);
+          await adminService.declareFinalWinners(activeAdminKey, selectedWinnerId, selectedRunnerUpId, winner?.team_name, runnerUp?.team_name);
           soundEffects.playKeyUnlocked();
           showConsoleNotice(`FINAL PODIUM PUBLISHED // WINNER: ${winner?.team_name}, RUNNER-UP: ${runnerUp?.team_name}`);
           fetchData();
@@ -290,7 +294,7 @@ export function AdminDashboard({ admin, gameSession, onResetDemo }) {
       onConfirm: async () => {
         setIsProcessing(true);
         try {
-          await adminService.resetEvent('ADMIN-CYBER-2026');
+          await adminService.resetEvent(activeAdminKey);
           if (onResetDemo) {
             await onResetDemo();
           }
@@ -329,9 +333,9 @@ export function AdminDashboard({ admin, gameSession, onResetDemo }) {
         setIsProcessing(true);
         try {
           if (winnerId && runnerUpId) {
-            await adminService.declareFinalWinners('ADMIN-CYBER-2026', winnerId, runnerUpId, winnerName, runnerUpName);
+            await adminService.declareFinalWinners(activeAdminKey, winnerId, runnerUpId, winnerName, runnerUpName);
           } else {
-            await adminService.setGameState('ADMIN-CYBER-2026', GAME_STATES.FINAL_RESULT, 4);
+            await adminService.setGameState(activeAdminKey, GAME_STATES.FINAL_RESULT, 4);
           }
           soundEffects.playAccessGranted();
           showConsoleNotice(`TOURNAMENT CONCLUDED // CHAMPION: ${winnerName}, RUNNER-UP: ${runnerUpName}`);

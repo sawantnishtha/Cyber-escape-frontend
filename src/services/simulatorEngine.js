@@ -2,6 +2,7 @@
 // Provides robust, zero-configuration local realtime state synchronization across tabs via BroadcastChannel & LocalStorage
 import { DEMO_TEAMS, DEMO_ROUND_1_QUESTIONS, DEMO_ROUND_2_CROSSWORDS, DEMO_ROUND_3_QUESTIONS, DEMO_ROUND_4_QUESTIONS } from '../constants/demoData.js';
 import { GAME_CONFIG, GAME_STATES } from '../constants/gameConfig.js';
+import { getTeamRiddleIndex } from '../utils/shuffleUtils.js';
 
 const STORAGE_KEY = 'cyber_escape_sim_state_v1';
 const CHANNEL_NAME = 'cyber_escape_realtime_channel';
@@ -196,8 +197,13 @@ class SimulatorEngine {
     const cleanKey = key.trim().toUpperCase();
     const defaultKey =
       (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_DEFAULT_ADMIN_KEY) ||
-      'ADMIN-CYBER-2026';
-    if (cleanKey === defaultKey || cleanKey === 'ADMIN-XXXX-XXXX' || cleanKey.startsWith('ADMIN-')) {
+      'ADM-2007';
+    if (
+      cleanKey === 'ADM-2007' ||
+      cleanKey === defaultKey ||
+      cleanKey.startsWith('ADM-') ||
+      cleanKey === 'ADMIN-CYBER-2026'
+    ) {
       return {
         success: true,
         admin: {
@@ -457,7 +463,36 @@ class SimulatorEngine {
       return { success: false, error: 'Maximum attempts reached.' };
     }
 
-    const isCorrect = answer.trim().toUpperCase() === GAME_CONFIG.FINAL_CHALLENGE.EXPECTED_ANSWER.toUpperCase();
+    const cleanAnswer = answer.trim().toUpperCase();
+    const team = state.teams.find((t) => t.id === teamId);
+    let isCorrect = false;
+
+    // Check against team's assigned riddle
+    if (team) {
+      const riddleIdx = getTeamRiddleIndex(team.team_key_hash || team.id);
+      const assignedRiddle = GAME_CONFIG.FINAL_CHALLENGE.RIDDLES?.[riddleIdx];
+      if (
+        assignedRiddle &&
+        assignedRiddle.answers.some((a) => a.toUpperCase() === cleanAnswer || cleanAnswer.includes(a.toUpperCase()))
+      ) {
+        isCorrect = true;
+      }
+    }
+
+    // Fallback: check across all configured riddles
+    if (!isCorrect && GAME_CONFIG.FINAL_CHALLENGE.RIDDLES) {
+      for (const r of GAME_CONFIG.FINAL_CHALLENGE.RIDDLES) {
+        if (r.answers.some((a) => a.toUpperCase() === cleanAnswer || cleanAnswer.includes(a.toUpperCase()))) {
+          isCorrect = true;
+          break;
+        }
+      }
+    }
+
+    if (!isCorrect) {
+      isCorrect = cleanAnswer === GAME_CONFIG.FINAL_CHALLENGE.EXPECTED_ANSWER.toUpperCase();
+    }
+
     const timestamp = new Date().toISOString();
 
     state.finalAttempts.push({
