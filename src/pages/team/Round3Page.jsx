@@ -208,9 +208,9 @@ export function Round3Page({ team, onRoundComplete }) {
           </div>
 
           <div
-            className={`cyber-timer-box ${timerSeconds <= 15 ? 'cyber-timer-danger' : timerSeconds <= 30 ? 'cyber-timer-warning' : ''}`}
+            className={`cyber-timer-box ${timerSeconds <= 30 ? 'cyber-timer-danger' : timerSeconds <= 60 ? 'cyber-timer-warning' : ''}`}
           >
-            <Clock size={16} /> 00:{timerSeconds.toString().padStart(2, '0')}
+            <Clock size={16} /> {String(Math.floor(timerSeconds / 60)).padStart(2, '0')}:{String(timerSeconds % 60).padStart(2, '0')}
           </div>
 
           <button

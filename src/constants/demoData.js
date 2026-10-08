@@ -2,26 +2,29 @@
 // Configured for CESA - Department of Computer Engineering
 
 export const DEMO_TEAMS = [
-  { id: 'team-001', team_name: 'Escaper', team_key_hash: 'CYB-001', current_round: 1, status: 'active' },
-  { id: 'team-002', team_name: 'Ctrl Alt Elite', team_key_hash: 'CYB-002', current_round: 1, status: 'active' },
-  { id: 'team-003', team_name: 'oops squad', team_key_hash: 'CYB-003', current_round: 1, status: 'active' },
-  { id: 'team-004', team_name: 'Team Toxic', team_key_hash: 'CYB-004', current_round: 1, status: 'active' },
-  { id: 'team-005', team_name: 'Ravenclaw', team_key_hash: 'CYB-005', current_round: 1, status: 'active' },
-  { id: 'team-006', team_name: 'Error 404', team_key_hash: 'CYB-006', current_round: 1, status: 'active' },
-  { id: 'team-007', team_name: 'ByteX', team_key_hash: 'CYB-007', current_round: 1, status: 'active' },
-  { id: 'team-008', team_name: 'Neo', team_key_hash: 'CYB-008', current_round: 1, status: 'active' },
-  { id: 'team-009', team_name: 'Team Elite', team_key_hash: 'CYB-009', current_round: 1, status: 'active' },
-  { id: 'team-010', team_name: 'CyberPunk', team_key_hash: 'CYB-010', current_round: 1, status: 'active' },
-  { id: 'team-011', team_name: 'VisionX', team_key_hash: 'CYB-011', current_round: 1, status: 'active' },
-  { id: 'team-012', team_name: 'CoreX', team_key_hash: 'CYB-012', current_round: 1, status: 'active' },
-  { id: 'team-013', team_name: 'Team Deathloop', team_key_hash: 'CYB-013', current_round: 1, status: 'active' },
-  { id: 'team-014', team_name: 'Team Vedant', team_key_hash: 'CYB-014', current_round: 1, status: 'active' },
-  { id: 'team-015', team_name: 'Cyber Titans', team_key_hash: 'CYB-015', current_round: 1, status: 'active' },
-  { id: 'team-016', team_name: 'Shadow Hackers', team_key_hash: 'CYB-016', current_round: 1, status: 'active' },
-  { id: 'team-017', team_name: 'Zero Day', team_key_hash: 'CYB-017', current_round: 1, status: 'active' },
-  { id: 'team-018', team_name: 'Kernel Panic', team_key_hash: 'CYB-018', current_round: 1, status: 'active' },
-  { id: 'team-019', team_name: 'Cipher Squad', team_key_hash: 'CYB-019', current_round: 1, status: 'active' },
-  { id: 'team-020', team_name: 'Terminal Force', team_key_hash: 'CYB-020', current_round: 1, status: 'active' }
+  { id: 'team-001', team_name: 'Team Toxic', team_key_hash: 'CYB-001', current_round: 1, status: 'active' },
+  { id: 'team-002', team_name: 'Wonder women', team_key_hash: 'CYB-002', current_round: 1, status: 'active' },
+  { id: 'team-003', team_name: 'Oops squad', team_key_hash: 'CYB-003', current_round: 1, status: 'active' },
+  { id: 'team-004', team_name: 'Vision X', team_key_hash: 'CYB-004', current_round: 1, status: 'active' },
+  { id: 'team-005', team_name: 'Cyber punk', team_key_hash: 'CYB-005', current_round: 1, status: 'active' },
+  { id: 'team-006', team_name: 'Team Death loop', team_key_hash: 'CYB-006', current_round: 1, status: 'active' },
+  { id: 'team-007', team_name: '4SH', team_key_hash: 'CYB-007', current_round: 1, status: 'active' },
+  { id: 'team-008', team_name: 'ARK', team_key_hash: 'CYB-008', current_round: 1, status: 'active' },
+  { id: 'team-009', team_name: 'NIV', team_key_hash: 'CYB-009', current_round: 1, status: 'active' },
+  { id: 'team-010', team_name: 'Bytex', team_key_hash: 'CYB-010', current_round: 1, status: 'active' },
+  { id: 'team-011', team_name: 'Raven claw', team_key_hash: 'CYB-011', current_round: 1, status: 'active' },
+  { id: 'team-012', team_name: 'Team outlaws', team_key_hash: 'CYB-012', current_round: 1, status: 'active' },
+  { id: 'team-013', team_name: 'Team rocket', team_key_hash: 'CYB-013', current_round: 1, status: 'active' },
+  { id: 'team-014', team_name: 'Corex', team_key_hash: 'CYB-014', current_round: 1, status: 'active' },
+  { id: 'team-015', team_name: 'Neo', team_key_hash: 'CYB-015', current_round: 1, status: 'active' },
+  { id: 'team-016', team_name: 'Ctrl alt elite', team_key_hash: 'CYB-016', current_round: 1, status: 'active' },
+  { id: 'team-017', team_name: 'Team Elite', team_key_hash: 'CYB-017', current_round: 1, status: 'active' },
+  { id: 'team-018', team_name: 'Escapers', team_key_hash: 'CYB-018', current_round: 1, status: 'active' },
+  { id: 'team-019', team_name: 'The Escape Artists', team_key_hash: 'CYB-019', current_round: 1, status: 'active' },
+  { id: 'team-020', team_name: 'Tremor Titans', team_key_hash: 'CYB-020', current_round: 1, status: 'active' },
+  { id: 'team-021', team_name: 'Team Dhurandar', team_key_hash: 'CYB-021', current_round: 1, status: 'active' },
+  { id: 'team-022', team_name: 'Tech Titans', team_key_hash: 'CYB-022', current_round: 1, status: 'active' },
+  { id: 'team-023', team_name: 'Error 4O4', team_key_hash: 'CYB-023', current_round: 1, status: 'active' }
 ];
 
 export const DEMO_TEAM_MEMBERS = [
@@ -440,7 +443,7 @@ export const DEMO_ROUND_3_QUESTIONS = [
     question_number: 1,
     question_type: 'binary',
     difficulty: 'easy',
-    time_limit_seconds: 60,
+    time_limit_seconds: 240,
     question_data: {
       binary: '01001100 01001111 01000011 01001011 00100000 01001001 01010100',
       instruction: 'Decode the 2-word system instruction from the 8-bit ASCII bitstream (separate words with a single space).'
@@ -453,7 +456,7 @@ export const DEMO_ROUND_3_QUESTIONS = [
     question_number: 2,
     question_type: 'binary',
     difficulty: 'easy',
-    time_limit_seconds: 60,
+    time_limit_seconds: 240,
     question_data: {
       binary: '01000011 01001000 01000101 01000011 01001011 00100000 01001001 01010100',
       instruction: 'Decode the 2-word verification command from the 8-bit stream.'
@@ -466,7 +469,7 @@ export const DEMO_ROUND_3_QUESTIONS = [
     question_number: 3,
     question_type: 'binary',
     difficulty: 'medium',
-    time_limit_seconds: 60,
+    time_limit_seconds: 240,
     question_data: {
       binary: '01000110 01001001 01001110 01000100 00100000 01010100 01001000 01000101 00100000 01001011 01000101 01011001',
       instruction: 'Decode the 3-word credential discovery phrase from the binary matrix.'
@@ -479,7 +482,7 @@ export const DEMO_ROUND_3_QUESTIONS = [
     question_number: 4,
     question_type: 'binary',
     difficulty: 'hard',
-    time_limit_seconds: 60,
+    time_limit_seconds: 240,
     question_data: {
       binary: '01000110 01001111 01001100 01001100 01001111 01010111 00100000 01010100 01001000 01000101 00100000 01010000 01000001 01010100 01001000',
       instruction: 'Decode the 3-word trace instruction from the binary bitstream.'

@@ -60,14 +60,14 @@ export const GAME_CONFIG = {
     DESCRIPTION: 'Direct binary-to-ASCII stream analysis using the permanent system reference matrix.',
     RULES: [
       '4 Binary-to-ASCII technical decoding challenges.',
-      '60 seconds per question.',
+      '4 minutes per question (240s).',
       'Maximum 2 attempts allowed per question.',
       'Hints available (Time penalty: -10s per hint).',
       'Each solved challenge unlocks one letter in a scrambled sequence (C, L, K, O).',
       'Unscramble and submit the verified 4-letter key (LOCK) to reveal Round 3 secret word: YOU.'
     ],
     TOTAL_QUESTIONS: 4,
-    DURATION_SECONDS: 60,
+    DURATION_SECONDS: 240, // 4 minutes per question
     MAX_ATTEMPTS: 2,
     MAX_HINTS: 1,
     EXPECTED_CODE: 'LOCK',

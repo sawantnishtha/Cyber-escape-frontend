@@ -133,13 +133,26 @@ export function TeamApp({ team, gameSession, onTeamStateChange }) {
       );
     }
 
-    if (isPostRound1 && currentTeam?.status === 'eliminated') {
+    // Determine current active game round number
+    let gameRoundNum = 1;
+    if ([GAME_STATES.R1_WAITING, GAME_STATES.R1_ACTIVE, GAME_STATES.R1_RESULT].includes(currentState)) gameRoundNum = 1;
+    else if ([GAME_STATES.R2_WAITING, GAME_STATES.R2_ACTIVE, GAME_STATES.R2_RESULT].includes(currentState)) gameRoundNum = 2;
+    else if ([GAME_STATES.R3_WAITING, GAME_STATES.R3_ACTIVE, GAME_STATES.R3_RESULT].includes(currentState)) gameRoundNum = 3;
+    else if ([GAME_STATES.R4_WAITING, GAME_STATES.R4_ACTIVE, GAME_STATES.R4_RESULT, GAME_STATES.FINAL_RIDDLE, GAME_STATES.FINAL_WAITING].includes(currentState)) gameRoundNum = 4;
+
+    // Disqualified / non-selected team handling:
+    // NO relogin required! Screen stays on ResultWaitingRoom. Cannot enter next round's challenges.
+    const isDisqualified =
+      gameRoundNum > 1 &&
+      (currentTeam?.status === 'eliminated' || (currentTeam?.current_round || 1) < gameRoundNum);
+
+    if (isDisqualified) {
+      const lastAttemptedRound = Math.min(gameRoundNum - 1, currentTeam?.current_round || 1);
       return (
         <ResultWaitingRoom
           team={currentTeam}
-          roundNumber={currentTeam?.current_round || 1}
+          roundNumber={lastAttemptedRound}
           gameSession={gameSession}
-          onEnterFinalRiddle={() => setHasEnteredFinalRiddle(true)}
         />
       );
     }
